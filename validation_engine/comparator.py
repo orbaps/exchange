@@ -18,6 +18,10 @@ class StateComparator:
             else:
                 self.compare_books(exp_book, actual_books[symbol], result)
                 
+        for symbol, act_book in actual_books.items():
+            if symbol not in expected_books:
+                result.add_fail(Mismatch(MismatchType.BOOK_STATE, None, act_book, f"Unexpected extra book for {symbol}"))
+                
         # Compare orders
         expected_orders_map = expected.order_snapshots
         actual_orders_map = actual.order_snapshots
@@ -31,6 +35,10 @@ class StateComparator:
                     result.add_fail(Mismatch(MismatchType.ORDER_STATE, exp_order, None, f"[{symbol}] Missing order {order_id}"))
                 else:
                     self.compare_orders(exp_order, act_orders[order_id], symbol, result)
+                    
+            for order_id, act_order in act_orders.items():
+                if order_id not in exp_orders:
+                    result.add_fail(Mismatch(MismatchType.ORDER_STATE, None, act_order, f"[{symbol}] Unexpected extra order {order_id}"))
                     
         # Compare trades
         expected_trades_map = expected.trade_snapshots

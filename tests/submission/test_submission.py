@@ -86,8 +86,9 @@ class TestEngine:
         val_result = SubmissionValidator.validate(sub_dir)
         self.assertTrue(val_result.success)
         
-        instance = SubmissionLoader.load(sub_dir, val_result.metadata)
-        self.assertEqual(instance.hello(), "world")
+        load_result = SubmissionLoader.load(sub_dir, val_result.metadata)
+        self.assertTrue(load_result.success)
+        self.assertEqual(load_result.engine.hello(), "world")
 
     def test_7_successful_registry_entry(self):
         sub_id = self.registry.register("Team A", "1.0", "Engine", "/path/to/sub")
@@ -103,8 +104,9 @@ class TestEngine:
         val_result = SubmissionValidator.validate(sub_dir)
         self.assertTrue(val_result.success, f"Failed validation: {val_result.errors}")
         
-        raw_engine = SubmissionLoader.load(sub_dir, val_result.metadata)
-        adapter = ContestantSubmissionAdapter(raw_engine)
+        load_result = SubmissionLoader.load(sub_dir, val_result.metadata)
+        self.assertTrue(load_result.success, f"Failed loading: {load_result.errors}")
+        adapter = ContestantSubmissionAdapter(load_result.engine)
         
         runner = BenchmarkRunner()
         scenario = get_simple_fill_scenario()

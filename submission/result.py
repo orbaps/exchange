@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional, List, Any
 from submission.metadata import SubmissionMetadata
 
 @dataclass
@@ -8,3 +8,4 @@ class SubmissionLoadResult:
     success: bool
     metadata: Optional[SubmissionMetadata] = None
     errors: List[str] = field(default_factory=list)
+    engine: Optional[Any] = None

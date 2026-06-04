@@ -36,3 +36,4 @@ class EngineSnapshot:
     book_snapshots: Dict[str, BookSnapshot]
     order_snapshots: Dict[str, Dict[int, OrderSnapshot]]
     trade_snapshots: Dict[str, List[TradeSnapshot]]
+    snapshot_version: int = 1

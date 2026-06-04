@@ -4,12 +4,13 @@ import importlib.util
 from typing import Any
 
 from submission.metadata import SubmissionMetadata
+from submission.result import SubmissionLoadResult
 
 class SubmissionLoader:
     """Dynamically loads and instantiates contestant engine code."""
     
     @staticmethod
-    def load(submission_dir: str, metadata: SubmissionMetadata) -> Any:
+    def load(submission_dir: str, metadata: SubmissionMetadata) -> SubmissionLoadResult:
         """Dynamically imports engine.py and returns an instance of the target class."""
         engine_path = os.path.join(submission_dir, "engine.py")
         
@@ -21,14 +22,22 @@ class SubmissionLoader:
             module_name = f"submission_{metadata.team_name.replace(' ', '_')}"
             spec = importlib.util.spec_from_file_location(module_name, engine_path)
             if spec is None or spec.loader is None:
-                raise ImportError(f"Could not load spec for {engine_path}")
+                return SubmissionLoadResult(False, metadata=metadata, errors=[f"Could not load spec for {engine_path}"])
                 
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
             spec.loader.exec_module(module)
             
             engine_class = getattr(module, metadata.engine_class)
-            return engine_class()
+            
+            try:
+                engine_instance = engine_class()
+                return SubmissionLoadResult(True, metadata=metadata, engine=engine_instance)
+            except Exception as e:
+                return SubmissionLoadResult(False, metadata=metadata, errors=[f"Contestant engine constructor raised {type(e).__name__}: {e}"])
+                
+        except Exception as e:
+            return SubmissionLoadResult(False, metadata=metadata, errors=[f"Module import failed: {e}"])
         finally:
             if submission_dir in sys.path:
                 sys.path.remove(submission_dir)
