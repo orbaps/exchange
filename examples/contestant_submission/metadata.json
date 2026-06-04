@@ -1,0 +1,5 @@
+{
+  "team_name": "Example Team",
+  "engine_class": "ContestantMatchingEngine",
+  "version": "1.0"
+}
