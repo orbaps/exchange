@@ -1,6 +1,5 @@
 import logging
 import traceback
-from typing import Dict
 from typing import Dict, Optional
 
 from campaign.config import CampaignConfig

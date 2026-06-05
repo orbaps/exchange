@@ -64,23 +64,8 @@ def main():
         # Snapshot
         snapshot: EngineSnapshot = engine.snapshot()
         
-        # We need to serialize the snapshot to JSON.
-        # Since it's a nested dataclass, standard json.dumps won't work out of the box unless we do a custom encode or use dataclasses.asdict
-        # Wait, the codebase doesn't have a snapshot serializer yet. Let's write a simple recursive dataclass-to-dict.
-        import dataclasses
-        def _to_dict(obj):
-            if dataclasses.is_dataclass(obj):
-                return {k: _to_dict(v) for k, v in dataclasses.asdict(obj).items()}
-            elif isinstance(obj, dict):
-                return {k: _to_dict(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [_to_dict(v) for v in obj]
-            elif hasattr(obj, "name"): # Enum
-                return obj.name
-            else:
-                return obj
-                
-        snapshot_dict = _to_dict(snapshot)
+        from validation_engine.serialization import to_dict
+        snapshot_dict = to_dict(snapshot)
         with open(snapshot_file, "w") as f:
             json.dump(snapshot_dict, f)
             

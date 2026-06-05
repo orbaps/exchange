@@ -213,7 +213,10 @@ Platform Support:
 
 Unix/Linux first.
 
-If platform unsupported:
+Note: Resource limits (like RLIMIT_AS) are best-effort.
+Behavior may vary by Linux distribution and kernel version.
+
+If platform unsupported (e.g. Windows):
 
 Gracefully skip.
 

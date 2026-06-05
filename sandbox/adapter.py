@@ -15,6 +15,11 @@ class SandboxedContestantAdapter(ContestantEngine):
     Buffered execution model.
     Events are accumulated and executed during snapshot().
     
+    TODO: Phase 4:
+    Incremental execution protocol.
+    Executing the entire scenario on snapshot is extremely expensive 
+    and makes fine-grained telemetry difficult.
+    
     This adapter provides a ContestantEngine-compatible interface,
     but internally queues events and dispatches them to a sandbox
     subprocess in bulk.
