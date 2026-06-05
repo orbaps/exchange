@@ -49,7 +49,7 @@ if __name__ == '__main__':
     from campaign.report import CampaignReport
     
     campaign = create_small_campaign()
-    runner = CampaignRunner()
+    runner = CampaignRunner(use_sandbox=True)
     result = runner.run(campaign)
     
     report_md = CampaignReport.generate_markdown(result)

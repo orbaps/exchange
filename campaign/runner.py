@@ -1,24 +1,31 @@
 import logging
 import traceback
 from typing import Dict
+from typing import Dict, Optional
 
 from campaign.config import CampaignConfig
 from campaign.campaign import BenchmarkCampaign
 from campaign.result import CampaignResult, ContestantCampaignResult, CampaignRunResult, RunStatus
 
 from benchmarking.runner import BenchmarkRunner
+from campaign.metrics import CampaignMetrics
 from benchmarking.factory import EngineFactory
 from submission.loader import SubmissionLoader
 from submission.wrapper import ContestantSubmissionAdapter
 from submission.metadata import SubmissionMetadata
+
+from sandbox.adapter import SandboxedContestantAdapter
+from sandbox.config import SandboxConfig
 
 logger = logging.getLogger(__name__)
 
 class CampaignRunner:
     """Executes a benchmark campaign strictly sequentially, isolating failures."""
     
-    def __init__(self, config: CampaignConfig = None):
+    def __init__(self, config: Optional[CampaignConfig] = None, use_sandbox: bool = False, sandbox_config: Optional[SandboxConfig] = None):
         self.config = config or CampaignConfig()
+        self.use_sandbox = use_sandbox
+        self.sandbox_config = sandbox_config or SandboxConfig()
         self.benchmark_runner = BenchmarkRunner()
         
     def run(self, campaign: BenchmarkCampaign) -> CampaignResult:
@@ -37,31 +44,34 @@ class CampaignRunner:
             contestant_result = ContestantCampaignResult(contestant_id=manifest.submission_id)
             
             # TODO(Phase 3.3): Load engine per scenario (load -> run -> destroy) for sandboxing
-            # Currently loading once per contestant
-            load_result = SubmissionLoader.load(manifest.submission_path, metadata)
-            
-            if not load_result.success:
-                logger.error(f"Failed to load contestant {manifest.submission_id}: {load_result.errors}")
-                # We can't run this contestant at all. Record failure for all scenarios.
-                for scenario in campaign.scenarios:
-                    campaign_result.total_runs += 1
-                    campaign_result.failed_runs += 1
-                    contestant_result.failed_runs += 1
-                    
-                    if self.config.record_failures:
-                        contestant_result.scenario_results.append(
-                            CampaignRunResult(
-                                contestant_id=manifest.submission_id,
-                                scenario_id=scenario.scenario_id,
-                                status=RunStatus.FAILURE,
-                                error=f"Load failure: {load_result.errors}"
-                            )
-                        )
-                campaign_result.results[manifest.submission_id] = contestant_result
-                continue
+            if self.use_sandbox:
+                # adapter will spawn the subprocess on snapshot()
+                adapter = SandboxedContestantAdapter(manifest, self.sandbox_config)
+            else:
+                # Current behavior (load once per contestant)
+                load_result = SubmissionLoader.load(manifest.submission_path, metadata)
                 
-            raw_engine = load_result.engine
-            adapter = ContestantSubmissionAdapter(raw_engine)
+                if not load_result.success:
+                    logger.error(f"Failed to load contestant {manifest.submission_id}: {load_result.errors}")
+                    for scenario in campaign.scenarios:
+                        campaign_result.total_runs += 1
+                        campaign_result.failed_runs += 1
+                        contestant_result.failed_runs += 1
+                        
+                        if self.config.record_failures:
+                            contestant_result.scenario_results.append(
+                                CampaignRunResult(
+                                    contestant_id=manifest.submission_id,
+                                    scenario_id=scenario.scenario_id,
+                                    status=RunStatus.FAILURE,
+                                    error=f"Load failure: {load_result.errors}"
+                                )
+                            )
+                    campaign_result.results[manifest.submission_id] = contestant_result
+                    continue
+                    
+                raw_engine = load_result.engine
+                adapter = ContestantSubmissionAdapter(raw_engine)
             
             for scenario in campaign.scenarios:
                 campaign_result.total_runs += 1
