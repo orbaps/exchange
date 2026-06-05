@@ -36,7 +36,8 @@ class CampaignRunner:
             
             contestant_result = ContestantCampaignResult(contestant_id=manifest.submission_id)
             
-            # Load the contestant engine once per contestant (or per scenario, but per contestant is better)
+            # TODO(Phase 3.3): Load engine per scenario (load -> run -> destroy) for sandboxing
+            # Currently loading once per contestant
             load_result = SubmissionLoader.load(manifest.submission_path, metadata)
             
             if not load_result.success:
@@ -109,6 +110,14 @@ class CampaignRunner:
                         logger.warning(f"Campaign reached max failures ({self.config.max_failures}). Halting.")
                         break
                         
+            # Calculate metrics
+            from campaign.metrics import CampaignMetrics
+            metrics = CampaignMetrics.calculate(contestant_result.scenario_results)
+            contestant_result.average_correctness = metrics["average_correctness"]
+            contestant_result.maximum_correctness = metrics["maximum_correctness"]
+            contestant_result.minimum_correctness = metrics["minimum_correctness"]
+            contestant_result.average_execution_time = metrics["average_execution_time"]
+            
             campaign_result.results[manifest.submission_id] = contestant_result
             
             if self.config.max_failures is not None and campaign_result.failed_runs >= self.config.max_failures:

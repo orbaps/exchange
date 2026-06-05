@@ -22,6 +22,9 @@ class ContestantCampaignResult:
     """The aggregate results for a single contestant across the campaign."""
     contestant_id: str
     average_correctness: float = 0.0
+    maximum_correctness: float = 0.0
+    minimum_correctness: float = 0.0
+    average_execution_time: float = 0.0
     total_mismatches: int = 0
     scenario_results: List[CampaignRunResult] = field(default_factory=list)
     failed_runs: int = 0

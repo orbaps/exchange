@@ -35,8 +35,16 @@ class TestCampaignFramework(unittest.TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_campaign_creation_and_execution(self):
-        manifest = SubmissionManifest(
+        manifest1 = SubmissionManifest(
             submission_id="sub-1",
+            team_name="Team A",
+            version="1.0",
+            engine_class="ContestantMatchingEngine",
+            submission_path=self.example_sub_path,
+            loaded_at=0.0
+        )
+        manifest2 = SubmissionManifest(
+            submission_id="sub-2",
             team_name="Team A",
             version="1.0",
             engine_class="ContestantMatchingEngine",
@@ -53,7 +61,7 @@ class TestCampaignFramework(unittest.TestCase):
             name="Test",
             description="Test",
             scenarios=scenarios,
-            contestants=[manifest, manifest] # test duplicate contestant to easily reach N*M
+            contestants=[manifest1, manifest2]
         )
         
         runner = CampaignRunner()

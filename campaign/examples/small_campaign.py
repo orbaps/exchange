@@ -29,13 +29,8 @@ def create_small_campaign() -> BenchmarkCampaign:
         loaded_at=time.time()
     )
     
-    scenarios = [
-        get_simple_fill_scenario(),
-        get_cancel_scenario(),
-        get_simple_fill_scenario(), # Just duplicating to reach 5
-        get_cancel_scenario(),
-        get_simple_fill_scenario()
-    ]
+    from benchmarking.scenarios.library import get_all_scenarios
+    scenarios = get_all_scenarios()
     
     # We rename IDs slightly so they are unique
     for i, s in enumerate(scenarios):

@@ -24,6 +24,7 @@ class CampaignReport:
             contestants_data[contestant_id] = ContestantReportData(
                 contestant_id=contestant_id,
                 average_correctness=metrics["average_correctness"],
+                average_execution_time=metrics["average_execution_time"],
                 total_mismatches=total_mismatches,
                 successful_runs=len(successful_scenario_runs),
                 failed_runs=contestant_result.failed_runs
@@ -53,6 +54,7 @@ class CampaignReport:
         for contestant_id, c_data in data.contestants.items():
             lines.append(f"### Contestant: {contestant_id}")
             lines.append(f"- **Correctness**: {c_data.average_correctness:.2f}%")
+            lines.append(f"- **Avg Execution Time**: {c_data.average_execution_time:.3f} ms")
             lines.append(f"- **Total Mismatches**: {c_data.total_mismatches}")
             lines.append(f"- **Successful Runs**: {c_data.successful_runs}")
             lines.append(f"- **Failed Runs**: {c_data.failed_runs}")

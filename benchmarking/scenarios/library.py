@@ -1,7 +1,7 @@
 from benchmarking.scenario import BenchmarkScenario, ScenarioEvent
 from reference_engine.models import Side, OrderType, TimeInForce
 
-def _base_payload(seq: int, ts: int, order_id: int, side: Side, price: int, qty: int) -> dict:
+def _base_payload(seq: int, ts: int, order_id: int, side: Side, price: int, qty: int, tif: TimeInForce = TimeInForce.GTC, party_id: str = None) -> dict:
     return {
         "sequence_no": seq,
         "timestamp_ns": ts,
@@ -12,8 +12,8 @@ def _base_payload(seq: int, ts: int, order_id: int, side: Side, price: int, qty:
         "order_type": OrderType.LIMIT.name,
         "price": price,
         "quantity": qty,
-        "tif": TimeInForce.GTC.name,
-        "party_id": f"p{order_id}",
+        "tif": tif.name,
+        "party_id": party_id or f"p{order_id}",
         "stop_price": None
     }
 
@@ -87,11 +87,92 @@ def get_cancel_scenario() -> BenchmarkScenario:
         ]
     )
 
+def get_replace_scenario() -> BenchmarkScenario:
+    return BenchmarkScenario(
+        scenario_id="replace_001",
+        name="Replace",
+        description="BUY 100, REPLACE to 150 @ 51",
+        seed=1006,
+        events=[
+            ScenarioEvent(1000, "NewOrderRequest", _base_payload(1, 1000, 1, Side.BUY, 50, 100)),
+            ScenarioEvent(2000, "ReplaceOrderRequest", {
+                "sequence_no": 2,
+                "timestamp_ns": 2000,
+                "original_order_id": 1,
+                "new_order_id": 2,
+                "new_price": 51,
+                "new_quantity": 150,
+                "symbol": "TEST",
+                "client_order_id": "c2"
+            })
+        ]
+    )
+
+def get_ioc_scenario() -> BenchmarkScenario:
+    return BenchmarkScenario(
+        scenario_id="ioc_001",
+        name="IOC",
+        description="SELL 50, BUY 100 IOC (should fill 50, cancel 50)",
+        seed=1007,
+        events=[
+            ScenarioEvent(1000, "NewOrderRequest", _base_payload(1, 1000, 1, Side.SELL, 50, 50)),
+            ScenarioEvent(2000, "NewOrderRequest", _base_payload(2, 2000, 2, Side.BUY, 50, 100, tif=TimeInForce.IOC))
+        ]
+    )
+
+def get_fok_scenario() -> BenchmarkScenario:
+    return BenchmarkScenario(
+        scenario_id="fok_001",
+        name="FOK",
+        description="SELL 50, BUY 100 FOK (should cancel 100)",
+        seed=1008,
+        events=[
+            ScenarioEvent(1000, "NewOrderRequest", _base_payload(1, 1000, 1, Side.SELL, 50, 50)),
+            ScenarioEvent(2000, "NewOrderRequest", _base_payload(2, 2000, 2, Side.BUY, 50, 100, tif=TimeInForce.FOK))
+        ]
+    )
+
+def get_smp_scenario() -> BenchmarkScenario:
+    return BenchmarkScenario(
+        scenario_id="smp_001",
+        name="SMP",
+        description="BUY 100 (p1), SELL 100 (p1) -> Should trigger Self Match Prevention",
+        seed=1009,
+        events=[
+            ScenarioEvent(1000, "NewOrderRequest", _base_payload(1, 1000, 1, Side.BUY, 50, 100, party_id="p1")),
+            ScenarioEvent(2000, "NewOrderRequest", _base_payload(2, 2000, 2, Side.SELL, 50, 100, party_id="p1"))
+        ]
+    )
+
+def get_large_book_scenario() -> BenchmarkScenario:
+    events = []
+    # Build 100 bids and 100 asks
+    for i in range(100):
+        # bids from 10 to 109, asks from 200 to 299
+        events.append(ScenarioEvent(1000 + i*10, "NewOrderRequest", _base_payload(1 + i*2, 1000 + i*10, 1 + i*2, Side.BUY, 10 + i, 10)))
+        events.append(ScenarioEvent(1005 + i*10, "NewOrderRequest", _base_payload(2 + i*2, 1005 + i*10, 2 + i*2, Side.SELL, 200 + i, 10)))
+    
+    # Sweep
+    events.append(ScenarioEvent(50000, "NewOrderRequest", _base_payload(999, 50000, 999, Side.BUY, 250, 1000)))
+    
+    return BenchmarkScenario(
+        scenario_id="large_book_001",
+        name="Large Book Sweep",
+        description="100 bids, 100 asks, then a large sweep crossing half the asks",
+        seed=1010,
+        events=events
+    )
+
 def get_all_scenarios():
     return [
         get_simple_fill_scenario(),
         get_partial_fill_scenario(),
         get_fifo_scenario(),
         get_multi_level_fill_scenario(),
-        get_cancel_scenario()
+        get_cancel_scenario(),
+        get_replace_scenario(),
+        get_ioc_scenario(),
+        get_fok_scenario(),
+        get_smp_scenario(),
+        get_large_book_scenario()
     ]

@@ -5,6 +5,7 @@ from typing import Dict
 class ContestantReportData:
     contestant_id: str
     average_correctness: float
+    average_execution_time: float
     total_mismatches: int
     successful_runs: int
     failed_runs: int
