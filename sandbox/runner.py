@@ -96,6 +96,8 @@ class SandboxRunner:
 
         # Try to read execution.json to get more structured errors if worker generated it
         execution_file = os.path.join(request.output_path, "execution.json")
+        execution_stats = None
+        
         if os.path.exists(execution_file):
             try:
                 with open(execution_file, "r") as f:
@@ -111,12 +113,26 @@ class SandboxRunner:
                             exception_message = err_parts[1].strip()
                         else:
                             exception_message = exec_data["error"]
-            except Exception:
-                pass
+                            
+                worker_runtime_ms = exec_data.get("runtime_ms", 0.0)
+                event_count = exec_data.get("event_count", 0)
+                if worker_runtime_ms > 0:
+                    from telemetry.execution import ExecutionStatistics
+                    eps = event_count / (worker_runtime_ms / 1000.0)
+                    execution_stats = ExecutionStatistics(
+                        runtime_ms=worker_runtime_ms,
+                        event_count=event_count,
+                        eps=eps
+                    )
+            except Exception as e:
+                logger.error(f"Failed to parse execution.json: {e}")
                 
         runtime_ms = (time.perf_counter() - process.start_time) * 1000 if process.start_time else 0.0
         # NOTE: wait(), start_time are used but process.start_time is float from time.perf_counter, let's fix import time in this file!
         
+        if execution_stats:
+            execution_stats.sandbox_overhead_ms = max(0.0, runtime_ms - execution_stats.runtime_ms)
+            
         return SandboxResult(
             success=success and not timed_out,
             exit_code=exit_code,
@@ -126,5 +142,6 @@ class SandboxRunner:
             stdout=stdout,
             stderr=stderr,
             exception_type=exception_type,
-            exception_message=exception_message
+            exception_message=exception_message,
+            execution_stats=execution_stats
         )

@@ -1,0 +1,14 @@
+{
+  "admin": {
+    "password": "adminpassword",
+    "role": "admin"
+  },
+  "judge": {
+    "password": "judgepassword",
+    "role": "admin"
+  },
+  "public": {
+    "password": "publicpassword",
+    "role": "public"
+  }
+}

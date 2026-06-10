@@ -97,6 +97,8 @@ class SandboxedContestantAdapter(ContestantEngine):
             with open(snapshot_path, "r") as f:
                 snapshot_data = json.load(f)
                 
+        self.last_execution_stats = result.execution_stats
+        
         # Parse snapshot_data back to EngineSnapshot
         return self._parse_snapshot(snapshot_data)
 

@@ -27,7 +27,18 @@ class CampaignReport:
                 average_execution_time=metrics["average_execution_time"],
                 total_mismatches=total_mismatches,
                 successful_runs=len(successful_scenario_runs),
-                failed_runs=contestant_result.failed_runs
+                failed_runs=contestant_result.failed_runs,
+                average_latency_ms=contestant_result.average_latency_ms,
+                best_latency_ms=contestant_result.best_latency_ms,
+                worst_latency_ms=contestant_result.worst_latency_ms,
+                average_tps=contestant_result.average_tps,
+                best_tps=contestant_result.best_tps,
+                worst_tps=contestant_result.worst_tps,
+                success_rate=contestant_result.success_rate,
+                average_score=contestant_result.average_score,
+                best_score=contestant_result.best_score,
+                worst_score=contestant_result.worst_score,
+                score_stddev=contestant_result.score_stddev
             )
             
         return ReportData(
@@ -38,10 +49,18 @@ class CampaignReport:
         )
 
     @staticmethod
-    def generate_markdown(result: CampaignResult) -> str:
+    def generate_markdown(result: CampaignResult, snapshot=None) -> str:
         data = CampaignReport.generate_data(result)
         
-        lines = [
+        lines = []
+        if snapshot:
+            from leaderboard.report import LeaderboardReport
+            lines.append(LeaderboardReport.generate_markdown(snapshot))
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+        
+        lines.extend([
             f"# Campaign Report: {data.campaign_id}",
             "",
             f"**Total Runs**: {data.total_runs}",
@@ -49,7 +68,7 @@ class CampaignReport:
             "",
             "## Contestant Results",
             ""
-        ]
+        ])
         
         for contestant_id, c_data in data.contestants.items():
             lines.append(f"### Contestant: {contestant_id}")
@@ -58,6 +77,17 @@ class CampaignReport:
             lines.append(f"- **Total Mismatches**: {c_data.total_mismatches}")
             lines.append(f"- **Successful Runs**: {c_data.successful_runs}")
             lines.append(f"- **Failed Runs**: {c_data.failed_runs}")
+            lines.append(f"- **Success Rate**: {c_data.success_rate:.2f}%")
+            lines.append(f"- **Avg Latency**: {c_data.average_latency_ms:.3f} ms")
+            lines.append(f"- **Best Latency**: {c_data.best_latency_ms:.3f} ms")
+            lines.append(f"- **Worst Latency**: {c_data.worst_latency_ms:.3f} ms")
+            lines.append(f"- **Avg TPS**: {c_data.average_tps:.2f} eps")
+            lines.append(f"- **Best TPS**: {c_data.best_tps:.2f} eps")
+            lines.append(f"- **Worst TPS**: {c_data.worst_tps:.2f} eps")
+            lines.append(f"- **Final Score (Avg)**: {c_data.average_score:.2f}")
+            lines.append(f"- **Best Score**: {c_data.best_score:.2f}")
+            lines.append(f"- **Worst Score**: {c_data.worst_score:.2f}")
+            lines.append(f"- **Score StdDev**: {c_data.score_stddev:.2f}")
             lines.append("")
             
         return "\n".join(lines)

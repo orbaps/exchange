@@ -20,3 +20,6 @@ class BenchmarkResult:
     contestant_execution_time_ms: float
     snapshot_count: int
     mismatch_count: int
+    
+    from telemetry.report import TelemetryReport
+    telemetry_report: Optional[TelemetryReport] = None

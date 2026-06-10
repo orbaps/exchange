@@ -45,9 +45,13 @@ def main():
         engine = load_result.engine
 
         # Process Events
+        import time
         with open(args.events_path, "r") as f:
             events_data = json.load(f)
             
+        start_time = time.perf_counter()
+        event_count = 0
+        
         for event in events_data:
             event_type = event["event_type"]
             payload = event["payload"]
@@ -60,9 +64,11 @@ def main():
                 engine.replace_order(payload)
             else:
                 raise ValueError(f"Unknown event type: {event_type}")
+            event_count += 1
 
         # Snapshot
         snapshot: EngineSnapshot = engine.snapshot()
+        runtime_ms = (time.perf_counter() - start_time) * 1000.0
         
         from validation_engine.serialization import to_dict
         snapshot_dict = to_dict(snapshot)
@@ -79,7 +85,9 @@ def main():
         resp = {
             "success": success,
             "snapshot_path": snapshot_file if success else None,
-            "error": error_msg
+            "error": error_msg,
+            "runtime_ms": runtime_ms if 'runtime_ms' in locals() else 0.0,
+            "event_count": event_count if 'event_count' in locals() else 0
         }
         with open(execution_file, "w") as f:
             json.dump(resp, f)

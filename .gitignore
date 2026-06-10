@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.coverage
+.pytest_cache/
+federation_run_artifacts/
+federation_run_replica/
+federation_run_snapshots/
+federation_run_checkpoints/
+New Text Document.txt
+test_exec_1.jsonl
+test_exec_4.jsonl
+*.log

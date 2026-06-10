@@ -12,3 +12,6 @@ class SandboxResult:
     stderr: str
     exception_type: Optional[str] = None
     exception_message: Optional[str] = None
+    
+    from telemetry.execution import ExecutionStatistics
+    execution_stats: Optional[ExecutionStatistics] = None
