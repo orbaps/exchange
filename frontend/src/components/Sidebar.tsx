@@ -34,9 +34,60 @@ export const Sidebar: React.FC = () => {
         </NavLink>
         
         {isAdmin && (
-          <NavLink to="/operations" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
-            <span>⚙️</span> Mission Control
-          </NavLink>
+          <>
+            <NavLink to="/operations" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>⚙️</span> Mission Control
+            </NavLink>
+            <NavLink to="/governance" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>⚖️</span> Governance
+            </NavLink>
+            <NavLink to="/forecast" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🔮</span> Forecasts
+            </NavLink>
+            <NavLink to="/risks" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>⚠️</span> Risks
+            </NavLink>
+            <NavLink to="/simulation" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🧪</span> Simulations
+            </NavLink>
+            <div style={{ marginTop: '10px', marginBottom: '5px', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Strategic</div>
+            <NavLink to="/strategic" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🗺️</span> Strategic Center
+            </NavLink>
+            <NavLink to="/multi-cluster" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🌐</span> Multi-Cluster
+            </NavLink>
+            <NavLink to="/recovery" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🏥</span> Recovery Center
+            </NavLink>
+            <NavLink to="/policy-hierarchy" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>📜</span> Policy Hierarchy
+            </NavLink>
+            <div style={{ marginTop: '10px', marginBottom: '5px', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Cloud</div>
+            <NavLink to="/cloud-operations" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>☁️</span> Operations Center
+            </NavLink>
+            <NavLink to="/deployments-gitops" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🚀</span> Deployment Center
+            </NavLink>
+            <div style={{ marginTop: '10px', marginBottom: '5px', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Certification</div>
+            <NavLink to="/benchmarking" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>⏱️</span> Benchmark Center
+            </NavLink>
+            <NavLink to="/performance-lab" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🔬</span> Performance Lab
+            </NavLink>
+            <NavLink to="/certification" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>🏆</span> Certification
+            </NavLink>
+            <NavLink to="/showcase" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>✨</span> Showcase
+            </NavLink>
+            <div style={{ marginTop: '10px', marginBottom: '5px', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Release</div>
+            <NavLink to="/release" style={({ isActive }) => isActive ? { ...styles.link, ...styles.linkActive } : styles.link}>
+              <span>📦</span> Release Center
+            </NavLink>
+          </>
         )}
       </nav>
 

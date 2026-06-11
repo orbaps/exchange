@@ -10,6 +10,11 @@ from dashboard.api.websockets import router as ws_router
 from dashboard.api.replay import router as replay_router
 from dashboard.api.evaluation import router as evaluation_router
 from dashboard.api.federation import router as federation_router
+from dashboard.api.governance import router as governance_router
+from dashboard.api.strategic import router as strategic_router
+from dashboard.api.cloud import router as cloud_router
+from dashboard.api.benchmarking import router as benchmarking_router
+from dashboard.api.release import router as release_router
 from dashboard.dependencies import event_bridge, aggregator
 
 # Configure logging
@@ -42,6 +47,11 @@ app.include_router(ws_router)
 app.include_router(replay_router)
 app.include_router(evaluation_router)
 app.include_router(federation_router)
+app.include_router(governance_router)
+app.include_router(strategic_router)
+app.include_router(cloud_router)
+app.include_router(benchmarking_router)
+app.include_router(release_router)
 
 @app.on_event("startup")
 async def startup_event():

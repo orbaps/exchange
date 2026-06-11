@@ -1,0 +1,1 @@
+# Reports handling deterministic artifacts

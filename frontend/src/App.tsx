@@ -16,6 +16,21 @@ import { Analytics } from './pages/Analytics';
 import { Operations } from './pages/Operations';
 import { SubmissionDetail } from './pages/SubmissionDetail';
 import { ReplayViewer } from './pages/ReplayViewer';
+import GovernanceCenter from './pages/GovernanceCenter';
+import ForecastCenter from './pages/ForecastCenter';
+import RiskCenter from './pages/RiskCenter';
+import SimulationStudio from './pages/SimulationStudio';
+import StrategicCenter from './pages/StrategicCenter';
+import MultiClusterView from './pages/MultiClusterView';
+import RecoveryCenter from './pages/RecoveryCenter';
+import PolicyHierarchyView from './pages/PolicyHierarchyView';
+import CloudOperationsCenter from './pages/CloudOperationsCenter';
+import DeploymentCenter from './pages/DeploymentCenter';
+import BenchmarkCenter from './pages/BenchmarkCenter';
+import PerformanceLab from './pages/PerformanceLab';
+import CertificationCenter from './pages/CertificationCenter';
+import ShowcaseCenter from './pages/ShowcaseCenter';
+import ReleaseCenter from './pages/ReleaseCenter';
 
 // Protected layout wrapper
 const AppLayout: React.FC = () => {
@@ -60,6 +75,21 @@ export const App: React.FC = () => {
           <Route path="/operations" element={<Operations />} />
           <Route path="/submission/:id" element={<SubmissionDetail />} />
           <Route path="/replay" element={<ReplayViewer />} />
+          <Route path="/governance" element={<GovernanceCenter />} />
+          <Route path="/forecast" element={<ForecastCenter />} />
+          <Route path="/risks" element={<RiskCenter />} />
+          <Route path="/simulation" element={<SimulationStudio />} />
+          <Route path="/strategic" element={<StrategicCenter />} />
+          <Route path="/multi-cluster" element={<MultiClusterView />} />
+          <Route path="/recovery" element={<RecoveryCenter />} />
+          <Route path="/policy-hierarchy" element={<PolicyHierarchyView />} />
+          <Route path="/cloud-operations" element={<CloudOperationsCenter />} />
+          <Route path="/deployments-gitops" element={<DeploymentCenter />} />
+          <Route path="/benchmarking" element={<BenchmarkCenter />} />
+          <Route path="/performance-lab" element={<PerformanceLab />} />
+          <Route path="/certification" element={<CertificationCenter />} />
+          <Route path="/showcase" element={<ShowcaseCenter />} />
+          <Route path="/release" element={<ReleaseCenter />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
