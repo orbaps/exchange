@@ -4,71 +4,82 @@
 
 # 🏛️ IICPC Exchange Platform
 
-**A Cloud-Native, Distributed Arena for Benchmarking Competitive Trading Engines**
+**Official Submission for the IICPC Summer Hackathon 2026**
 
 [![CI Status](https://img.shields.io/github/actions/workflow/status/orbaps/exchange/ci.yml?branch=main&label=Build&logo=githubactions&logoColor=white&style=for-the-badge)](https://github.com/orbaps/exchange/actions)
 [![Python Version](https://img.shields.io/badge/Python-3.11+-3776AB.svg?logo=python&logoColor=white&style=for-the-badge)](https://python.org)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Native-326CE5.svg?logo=kubernetes&logoColor=white&style=for-the-badge)](https://kubernetes.io)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-[**Documentation**](docs/) · [**API Reference**](generated/api_docs.md) · [**SDK Guide**](#-contestant-sdk) · [**Report a Bug**](https://github.com/orbaps/exchange/issues)
+[**Documentation**](docs/) · [**API Reference**](generated/api_docs.md) · [**Quick Start**](#-getting-started) · [**Hackathon Deliverables**](#-expected-deliverables)
 
 </div>
 
 ---
 
-## 🚀 The Vision
+## ☀️ IICPC Summer Hackathon 2026
 
-Traditional benchmarking of trading systems is flawed. It conflates network jitter with engine latency, lacks proper isolation, and fails to simulate realistic, deterministic market conditions.
+*Running from May 9th to June 10th, 2026.*
 
-**IICPC Exchange** changes the game. It is a production-grade, distributed benchmarking arena built for evaluating competitive matching engine implementations. We provide the infrastructure—Firecracker microVMs, a deterministic sequencer, a seeded bot fleet, and event-by-event correctness validation. **You provide the matching logic.**
+This competition is designed for top-tier systems engineers, competitive programmers, and algorithmic thinkers. At IICPC, we champion hardcore engineering excellence. This is not a standard "demo-to-win" hackathon; it demands high-performance code, system resilience, and a deep understanding of scale and distributed systems. Every technical decision in this repository is backed by a deliberate, well-reasoned architectural thought process.
 
-It’s like competitive programming, but for building high-frequency trading (HFT) exchanges.
+### 🎯 The Challenge
+
+The objective is to architect and build a **Distributed Benchmarking and Hosting Platform** designed to evaluate contestant-submitted trading infrastructure. 
+
+The platform allows contestants to upload their core code (matching engines/simulated orderbooks). The system securely hosts this submission, exposes endpoints, and dynamically spawns a massive, distributed fleet of "trading bots" to bombard the system with concurrent orders, simulating peak market volatility. Finally, the platform captures granular telemetry to assess the submitted code on latency, throughput, and correctness, streaming the results to a live, dynamic leaderboard.
 
 ---
 
-## ✨ Engineering Marvels
+## 🏗️ Architectural Components & Requirements
+
+Our solution directly addresses and exceeds the hackathon's core requirements, implementing a highly concurrent, resilient, and decoupled microservices architecture.
 
 <table width="100%">
 <tr>
 <td width="50%">
 
-### 🔒 Hardware-Grade Isolation
-Untrusted contestant code runs in **Firecracker microVMs** with CPU pinning (`isolcpus`), SMT disabled, and strict cgroup memory/IO limits. No noisy neighbors.
+### 1️⃣ Submission & Sandboxing Engine
+**Requirement:** Secure pipeline for code upload, containerized deployment, strict isolation, and fair resource allocation.
+
+**Our Implementation:**
+- **Firecracker MicroVMs:** Untrusted contestant code runs in hardware-isolated microVMs (`contestant_sandbox/`).
+- **Resource Fairness:** Strict cgroup memory/IO limits, CPU pinning (`isolcpus`), and disabled SMT. No noisy neighbors.
+- **Zero-Jitter IPC:** Network latency is decoupled from engine latency. Sequenced events are delivered via **wait-free SPSC shared-memory ring buffers**.
 
 </td>
 <td width="50%">
 
-### ⏱️ Absolute Determinism
-A centralized **Sequencer** assigns globally monotonic sequence numbers and nanosecond logical timestamps to all incoming orders. Arrival-order variance is mathematically eliminated.
+### 2️⃣ Distributed Load Generator (Bot Fleet)
+**Requirement:** Scalable traffic generation spawning thousands of bots simulating diverse market participants (Limit/Market/Cancels).
 
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### ⚡ Zero-Jitter IPC
-Network latency is decoupled from engine latency. The platform delivers sequenced events via **wait-free SPSC shared-memory ring buffers**. We measure your engine's true nanosecond performance.
-
-</td>
-<td width="50%">
-
-### 🛡️ Event-Level Validation
-Every submission is diffed event-by-event against a golden **Reference Engine**. We enforce state machine compliance, quantity conservation, and strict price-time priority.
+**Our Implementation:**
+- **Seeded PRNG Bot Fleet:** Generates **100,000+ orders/second** (`botfleet/`). Bots execute configurable strategies (Market Making, Momentum, Noise) mapped to realistic market regimes.
+- **Absolute Determinism:** A centralized **Sequencer** assigns globally monotonic sequence numbers and nanosecond logical timestamps to all incoming orders. Arrival-order variance is mathematically eliminated.
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🤖 Distributed Bot Fleet
-Generates **100,000+ orders/second** using seeded PRNGs. Bots execute configurable strategies (Market Making, Momentum, Noise) mapped to realistic market regimes.
+### 3️⃣ Telemetry & Validation Ingester
+**Requirement:** Low-latency tracking for latency (p50, p90, p99), throughput (TPS), and correctness (price-time priority, fill accuracy).
+
+**Our Implementation:**
+- **Golden Reference Engine:** Every submission is diffed event-by-event against our built-in `reference_engine/` (supporting FIFO, Pro-Rata).
+- **Deep Validation:** Enforces state machine compliance, quantity conservation, and strict price-time priority (`validation_engine/`).
+- **Telemetry Pipeline:** Granular latency profiling and throughput tracking separated from network jitter (`telemetry/`).
 
 </td>
 <td width="50%">
 
-### 🌍 Federated Consensus
-Multi-node execution powered by a **Raft-inspired consensus protocol**, complete with write-ahead logging (WAL), snapshotting, and autonomous self-healing.
+### 4️⃣ Real-Time Leaderboard & Analytics
+**Requirement:** Frontend streaming live metrics, ranking contestants dynamically on speed, stability, and algorithmic accuracy.
+
+**Our Implementation:**
+- **Composite Scoring Engine:** Weights correctness (70%), latency (15%), throughput (10%), and reliability (5%) (`scoring/`).
+- **React 19 SPA:** Operator dashboard connected via WebSockets for sub-second live updates (`frontend/`, `dashboard/`).
+- **Redis-Backed Leaderboard:** Real-time ranking with historical time-series tracking (`leaderboard/`).
 
 </td>
 </tr>
@@ -76,9 +87,19 @@ Multi-node execution powered by a **Raft-inspired consensus protocol**, complete
 
 ---
 
-## 🏗️ System Architecture
+## 📦 Expected Deliverables
 
-The platform is divided into a **Control Plane** for orchestration and a **Runner Cluster** for CPU-pinned execution.
+We have fully delivered on the required Hackathon assets:
+
+1. ✅ **Working Infrastructure Prototype:** A fully functional platform demonstrating the complete pipeline (Upload → Deployment → Load Testing → Scoring). See [Getting Started](#-getting-started) to run the full stack via `docker-compose`.
+2. ✅ **Architecture Blueprint:** A comprehensive system design document detailing microservices, gRPC/Kafka inter-service communication, TimescaleDB/Redis data stores, and Firecracker isolation. See the [Architecture section below](#-system-architecture) and the full [`docs/technical_design.md`](docs/technical_design.md).
+3. ✅ **Infrastructure as Code (IaC):** Automated deployment scripts proving horizontal scalability in a modern cloud environment. See the [`iac/`](iac/) directory for our complete **Terraform**, **Kubernetes (Helm)**, and **GitOps (ArgoCD/Flux)** configurations.
+
+---
+
+## 🗺️ System Architecture
+
+The platform is divided into a **Control Plane** for orchestration and a **Runner Cluster** for CPU-pinned, isolated execution.
 
 ```mermaid
 flowchart TB
@@ -87,22 +108,22 @@ flowchart TB
         Leaderboard[(Redis Leaderboard)]
         Scoring[Scoring Engine]
         Telemetry[Telemetry & Analytics]
-        Governance[Governance & Federation]
+        Governance[Federation & IaC Orchestration]
     end
 
     subgraph Runner Cluster [Isolated Runner Node]
-        BotFleet[Bot Fleet\nLoad Generators]
+        BotFleet[Distributed Bot Fleet\n100k+ TPS]
         Sequencer[Sequencer\nMonotonic Timestamps]
         
-        Gateway[IPC Gateway]
+        Gateway[IPC Gateway\nZero-Jitter]
         
         Sandbox[Firecracker Sandbox\nContestant Engine]
         Reference[Reference Engine\nGolden Standard]
         
-        Validator[Validation Engine\nState & Replay Diffs]
+        Validator[Validation Ingester\nState & Replay Diffs]
     end
 
-    BotFleet -->|Raw Orders| Sequencer
+    BotFleet -->|Raw Orders (Kafka/gRPC)| Sequencer
     Sequencer -->|Sequenced Journal| Gateway
     Sequencer -->|Sequenced Journal| Reference
     
@@ -118,52 +139,54 @@ flowchart TB
     Telemetry --> Dashboard
 ```
 
----
-
-## 🧩 Core Components
-
-The IICPC monorepo contains over 30 micro-packages. Here are the pillars of the platform:
-
-<details>
-<summary><b>1️⃣ Execution & Sequencing (`gateway/`, `sequencer/`, `execution/`)</b></summary>
-<br/>
-The heart of the runtime. The Sequencer writes an append-only journal of all events. The Gateway reads this journal and bridges it to contestant engines via SBE (Simple Binary Encoding) over shared memory.
-</details>
-
-<details>
-<summary><b>2️⃣ Validation & Scoring (`validation_engine/`, `scoring/`, `reference_engine/`)</b></summary>
-<br/>
-The Reference Engine supports FIFO, Pro-Rata, and Threshold Pro-Rata matching. The Validation Engine computes deep replay diffs. The Scoring Engine generates a composite score based on correctness (70%), latency (15%), throughput (10%), and reliability (5%).
-</details>
-
-<details>
-<summary><b>3️⃣ Distributed Federation (`federation/`, `orchestration/`, `governance/`)</b></summary>
-<br/>
-Raft-based leader election, distributed scheduling, and an autonomous cluster brain that detects anomalies, predicts capacity limits, and self-heals network partitions.
-</details>
-
-<details>
-<summary><b>4️⃣ Competition Platform (`tournament/`, `campaign/`, `leaderboard/`)</b></summary>
-<br/>
-Full bracket tournament management (single/double elimination, Swiss), benchmark campaigns, and a Redis-backed real-time leaderboard with time-series history.
-</details>
-
-<details>
-<summary><b>5️⃣ Infrastructure & UI (`hosting/`, `dashboard/`, `frontend/`, `iac/`)</b></summary>
-<br/>
-A React 19 SPA dashboard streaming live WebSocket analytics. Complete Kubernetes Helm charts and Terraform provisioning for GKE/OKE.
-</details>
+*Tech Stack: Python 3.11+, FastAPI, React 19, gRPC/Protobuf, Apache Kafka (KRaft), PostgreSQL (TimescaleDB), Redis, Kubernetes, Terraform, Prometheus/Grafana.*
 
 ---
 
-## 💻 Contestant SDK
+## 🚀 Getting Started
 
-Contestants do not write network servers. They write pure, high-performance algorithms. 
+### Prerequisites
+- Python 3.11+
+- Docker 24+ & Docker Compose
+- (Optional) `kubectl` and `kind` for local Kubernetes deployment
 
-Your submission is compiled as a shared library (`.so` / `.dll`) exposing a strict C ABI. The platform loads it dynamically and communicates via shared memory.
+### ⚡ The Fast Track (Docker Compose)
+Launch the entire platform prototype locally, including Postgres, Redis, Kafka (KRaft), and the React Dashboard.
+
+```bash
+git clone https://github.com/orbaps/exchange.git
+cd exchange
+
+# Install Python dependencies and generate gRPC stubs
+pip install -r requirements.txt
+make proto
+
+# Boot the distributed cluster
+docker-compose up -d
+```
+Access the operator dashboard at **[http://localhost:8080](http://localhost:8080)**.
+
+### 🌐 Cloud Deployment (Kubernetes / IaC)
+To deploy the platform via Infrastructure as Code (IaC) to a Kubernetes cluster:
+
+```bash
+# Spin up a local multi-node Kubernetes cluster using KIND
+./scripts/kind-cluster.sh  # Or .\scripts\kind-cluster.ps1 on Windows
+
+# Deploy the full Helm chart
+make kind-deploy
+```
+
+*For production GKE/OKE deployment, navigate to `iac/terraform/environments/production` and run `terraform apply`.*
+
+---
+
+## 💻 Contestant SDK & Submission Format
+
+Contestants do not write network servers. They write pure, high-performance algorithms. Submissions are compiled as shared libraries (`.so` / `.dll`) exposing a strict C ABI. The platform loads it dynamically and communicates via shared memory.
 
 ```c
-// 1. Initialize your data structures
+// 1. Initialize data structures
 EngineHandle* engine_init(const InstrumentDefinition* instruments, uint32_t count);
 
 // 2. Process incoming sequenced events (New, Cancel, Replace)
@@ -178,56 +201,16 @@ void engine_on_message(
 void engine_destroy(EngineHandle* handle);
 ```
 
-### Supported Exchange Features
-- **Order Types:** Limit, Market, Stop-Limit
-- **Time In Force:** GFD (Good for Day), GTC, IOC, FOK
-- **Self-Match Prevention:** Cancel Newest, Cancel Oldest, Cancel Both
-- **Sessions:** Pre-Open (Auction Uncrossing), Continuous, Halted
-
-> 💡 **Want to see it in action?** Check out the [`examples/`](examples/) directory for a complete template.
+> 💡 **Reference Implementation:** Check out the [`examples/`](examples/) directory for a complete contestant template.
 
 ---
 
-## 🚦 Getting Started
+## 🧪 Testing, Validation & CI/CD
 
-### Prerequisites
-- Python 3.11+
-- Docker 24+ & Docker Compose
-- (Optional) `kubectl` and `kind` for local Kubernetes deployment
-
-### Option A: The Fast Track (Docker Compose)
-Launch the entire platform, including Postgres, Redis, Kafka (KRaft), and the React Dashboard.
-
-```bash
-git clone https://github.com/orbaps/exchange.git
-cd exchange
-
-# Install Python dependencies and generate gRPC stubs
-pip install -r requirements.txt
-make proto
-
-# Boot the cluster
-docker-compose up -d
-```
-Access the operator dashboard at **[http://localhost:8080](http://localhost:8080)**.
-
-### Option B: Local Kubernetes (KIND)
-Spin up a multi-node Kubernetes cluster locally using KIND.
-
-```bash
-# Windows
-.\scripts\kind-cluster.ps1
-
-# Linux / macOS
-./scripts/kind-cluster.sh
-```
-*See [KIND_CLUSTER.md](KIND_CLUSTER.md) for ingress and port mappings.*
-
----
-
-## 🧪 Testing & Validation
-
-The platform tests itself rigorously before it tests contestants.
+Our CI/CD pipeline enforces hardcore engineering excellence:
+- **100% Determinism Validation:** Ensuring zero flakiness across runs.
+- **Security Audits:** `pip-audit`, CodeQL, and container scanning.
+- **Matrix Builds:** Compiling and testing all 7 microservices.
 
 ```bash
 make test           # Run 24+ test suites with coverage
@@ -236,27 +219,11 @@ make fmt            # Auto-formatting
 make mypy           # Static type analysis
 ```
 
-Our CI/CD pipeline enforces 100% determinism across the platform, running security audits (`pip-audit`, CodeQL) and matrix builds for all 7 microservices.
-
----
-
-## 🤝 Contributing
-
-We are building the ultimate open-source benchmarking standard for trading systems. PRs are welcome!
-
-1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/amazing-engine`)
-3. Commit your changes (`git commit -m 'feat: add amazing engine'`)
-4. Push to the branch (`git push origin feature/amazing-engine`)
-5. Open a Pull Request
-
 ---
 
 <div align="center">
 <br/>
 <p>Distributed under the <strong>MIT License</strong>. See <code>LICENSE</code> for more information.</p>
-
 <p><b>Built for the obsessed. Engineered for fairness.</b> 🏛️</p>
-
 </div>
 ]]>
