@@ -65,7 +65,6 @@ packages = [
     "packaging",
     "performance",
     "reference_engine",
-    "reports",
     "sandbox",
     "scoring",
     "sdk",
