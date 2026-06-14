@@ -45,7 +45,6 @@ dependencies = [
 packages = [
     "analytics",
     "benchmarking",
-    "bot_fleet",
     "botfleet",
     "campaign",
     "contracts",
