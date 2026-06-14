@@ -1,0 +1,28 @@
+{{- if .Values.prometheus.enabled }}
+# ServiceMonitor for Prometheus operator compatibility
+{{- $fullname := include "iicpc.fullname" . }}
+{{- $services := list "hosting" "evaluation" "governance" "strategic" "dashboard" "botfleet" "federation" }}
+{{- range $service := $services }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $fullname }}-{{ $service }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" $ | nindent 4 }}
+    app: {{ $service }}
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: {{ $service }}
+  endpoints:
+    - port: {{ (first (index $.Values $service).service.ports).name }}
+      interval: 15s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}

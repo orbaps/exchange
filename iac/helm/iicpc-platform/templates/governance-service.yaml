@@ -1,0 +1,24 @@
+# Governance service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iicpc.fullname" . }}-governance
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: governance
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+spec:
+  type: {{ .Values.governance.service.type }}
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http
+      protocol: TCP
+    - name: grpc
+      port: 50051
+      targetPort: grpc
+      protocol: TCP
+  selector:
+    app: governance

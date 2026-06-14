@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package iicpc.hosting;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/hosting";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+
+// Execution request to container
+message ExecutionRequest {
+  string session_id = 1;
+  TradingEvent trading_event = 2;
+  int64 timestamp_ns = 3;
+}
+
+// Execution response from container
+message ExecutionResponse {
+  bool success = 1;
+  int64 latency_ns = 2;
+  string error = 3;
+  OrderAck order_ack = 4;
+}
+
+// Trading event from bots
+message TradingEvent {
+  string event_id = 1;
+  int64 timestamp_ns = 2;
+  string bot_id = 3;
+  string instrument = 4;
+  
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    NEW_ORDER = 1;
+    CANCEL = 2;
+    REPLACE = 3;
+  }
+  EventType event_type = 5;
+  
+  int64 quantity = 6;
+  double price = 7;
+  string side = 8;              // BUY/SELL
+  string order_id = 9;
+  string original_order_id = 10; // For replace/cancel
+  double new_price = 11;         // For replace
+  int64 new_quantity = 12;       // For replace
+}
+
+// Order acknowledgment
+message OrderAck {
+  string order_id = 1;
+  enum AckStatus {
+    ACK_STATUS_UNSPECIFIED = 0;
+    ACCEPTED = 1;
+    REJECTED = 2;
+    PARTIAL = 3;
+  }
+  AckStatus status = 2;
+  double filled_price = 3;
+  int64 filled_quantity = 4;
+  string message = 5;
+}
+
+// Container execution service
+service ContainerExecution {
+  // Execute a single trading event
+  rpc Execute(ExecutionRequest) returns (ExecutionResponse);
+  
+  // Stream execution for batch processing
+  rpc ExecuteStream(stream ExecutionRequest) returns (stream ExecutionResponse);
+  
+  // Get container health
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Get container metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+  
+  // Snapshot container state
+  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse);
+}
+
+message SnapshotRequest {
+  string container_id = 1;
+}
+
+message SnapshotResponse {
+  string container_id = 1;
+  EngineSnapshot snapshot = 2;
+  int64 timestamp_ns = 3;
+}
+
+// Engine snapshot (matches validation_engine models)
+message EngineSnapshot {
+  map<string, BookSnapshot> book_snapshots = 1;
+  map<string, OrderSnapshotMap> order_snapshots = 2;
+  map<string, TradeSnapshotList> trade_snapshots = 3;
+}
+
+message BookSnapshot {
+  string instrument = 1;
+  double best_bid = 2;
+  double best_ask = 3;
+  double spread = 4;
+  repeated PriceLevel bid_depth = 5;
+  repeated PriceLevel ask_depth = 6;
+  int64 timestamp = 7;
+}
+
+message PriceLevel {
+  double price = 1;
+  int64 quantity = 2;
+  int64 order_count = 3;
+}
+
+message OrderSnapshotMap {
+  map<string, OrderSnapshot> orders = 1;
+}
+
+message OrderSnapshot {
+  int64 order_id = 1;
+  enum OrderStatus {
+    ORDER_STATUS_UNSPECIFIED = 0;
+    NEW = 1;
+    PARTIAL = 2;
+    FILLED = 3;
+    CANCELLED = 4;
+    REJECTED = 5;
+  }
+  OrderStatus status = 2;
+  int64 remaining_quantity = 3;
+  int64 filled_quantity = 4;
+  double price = 5;
+  string side = 6;
+  string instrument = 7;
+  int64 timestamp_ns = 8;
+}
+
+message TradeSnapshotList {
+  repeated TradeSnapshot trades = 1;
+}
+
+message TradeSnapshot {
+  string trade_id = 1;
+  double price = 2;
+  int64 quantity = 3;
+  string aggressor_side = 4;    // BUY/SELL
+  string instrument = 5;
+  int64 timestamp_ns = 6;
+  string maker_order_id = 7;
+  string taker_order_id = 8;
+}

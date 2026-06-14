@@ -1,0 +1,107 @@
+{{- $nginxIngress := index .Values "nginx-ingress" -}}
+{{- if $nginxIngress.enabled }}
+# NGINX Ingress Controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-ingress-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: ingress-nginx
+spec:
+  replicas: {{ $nginxIngress.controller.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: ingress-nginx
+  template:
+    metadata:
+      labels:
+        app: ingress-nginx
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}-ingress
+      containers:
+        - name: ingress-nginx
+          image: "{{ $nginxIngress.controller.image.repository }}:{{ $nginxIngress.controller.image.tag }}"
+          imagePullPolicy: {{ $nginxIngress.controller.image.pullPolicy }}
+          args:
+            - /nginx-ingress-controller
+            - --publish-service=$(POD_NAMESPACE)/{{ include "iicpc.fullname" . }}-ingress-nginx
+            - --election-id=ingress-controller-leader
+            - --controller-class=k8s.io/ingress-nginx
+            - --ingress-class=nginx
+            - --configmap=$(POD_NAMESPACE)/{{ include "iicpc.fullname" . }}-ingress-nginx
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+            - name: metrics
+              containerPort: 10254
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml $nginxIngress.controller.resources | nindent 12 }}
+
+---
+# NGINX Ingress Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iicpc.fullname" . }}-ingress-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: ingress-nginx
+  annotations:
+    {{- range $key, $value := $nginxIngress.controller.service.annotations }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+spec:
+  type: {{ $nginxIngress.controller.service.type }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: https
+      protocol: TCP
+  selector:
+    app: ingress-nginx
+
+---
+# NGINX Ingress ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-ingress-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: ingress-nginx
+data:
+  {{- range $key, $value := $nginxIngress.controller.config }}
+  {{ $key }}: "{{ $value }}"
+  {{- end }}
+{{- end }}

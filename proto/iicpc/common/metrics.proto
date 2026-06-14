@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package iicpc.common;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/common";
+
+// Standard metrics types for Prometheus-compatible exposition
+message Metric {
+  string name = 1;
+  string help = 2;
+  MetricType type = 3;
+  repeated Label labels = 4;
+  oneof value {
+    double gauge = 5;
+    double counter = 6;
+    Histogram histogram = 7;
+    Summary summary = 8;
+  }
+}
+
+enum MetricType {
+  METRIC_TYPE_UNSPECIFIED = 0;
+  GAUGE = 1;
+  COUNTER = 2;
+  HISTOGRAM = 3;
+  SUMMARY = 4;
+}
+
+message Label {
+  string name = 1;
+  string value = 2;
+}
+
+message Histogram {
+  repeated Bucket buckets = 1;
+  uint64 count = 2;
+  double sum = 3;
+}
+
+message Bucket {
+  double upper_bound = 1;
+  uint64 count = 2;
+}
+
+message Summary {
+  repeated Quantile quantiles = 1;
+  uint64 count = 2;
+  double sum = 3;
+}
+
+message Quantile {
+  double quantile = 1;
+  double value = 2;
+}
+
+// Metrics collection request
+message MetricsRequest {
+  string service = 1;
+  repeated string metric_names = 2;
+}
+
+// Metrics collection response
+message MetricsResponse {
+  repeated Metric metrics = 1;
+  int64 timestamp_ns = 2;
+}
+
+// Service for exposing metrics via gRPC (alternative to Prometheus HTTP)
+service Metrics {
+  rpc Collect(MetricsRequest) returns (MetricsResponse);
+  rpc Stream(MetricsRequest) returns (stream MetricsResponse);
+}

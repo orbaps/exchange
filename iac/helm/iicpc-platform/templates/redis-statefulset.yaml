@@ -1,0 +1,76 @@
+{{- if .Values.redis.enabled }}
+# Redis statefulset
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "iicpc.fullname" . }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "iicpc.fullname" . }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image }}"
+          imagePullPolicy: "IfNotPresent"
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              value: "{{ .Values.redis.auth }}"
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: {{ include "iicpc.fullname" . }}-redis-pvc
+
+---
+# PersistentVolumeClaim for Redis
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "iicpc.fullname" . }}-redis-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.redis.master.persistence.size }}
+  storageClassName: {{ .Values.redis.master.persistence.storageClass }}
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iicpc.fullname" . }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP
+  selector:
+    app: redis
+{{- end }}

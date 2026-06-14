@@ -1,0 +1,348 @@
+# Kind cluster specific values for IICPC Platform
+# Optimized for local development with Kind Kubernetes
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: "iicpc"
+suffix: ""
+fullnameOverride: "iicpc"
+
+# Resource limits for Kind (smaller than production)
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+# Autoscaling disabled for Kind (single node)
+autoscaling:
+  enabled: false
+
+# Pod affinity for Kind
+nodeSelector: {}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: workload
+              operator: In
+              values: ["general", "botfleet", "federation"]
+
+# Global configuration for Kind
+global:
+  # Use external services (uncomment if available)
+  # postgresql:
+  #   host: "host.minikube.internal"
+  #   port: 5432
+  #   database: "iicpc"
+  #   username: "iicpc"
+  #   password: "secret"
+  # redis:
+  #   host: "host.minikube.internal"
+  #   port: 6379
+  #   password: "secret"
+  # kafka:
+  #   bootstrap_servers: "host.minikube.internal:9092"
+  #   sasl_username: "user"
+  #   sasl_password: "secret"
+  # timescaledb:
+  #   host: "host.minikube.internal"
+  #   port: 5432
+  #   database: "iicpc"
+  #   username: "iicpc"
+  #   password: "secret"
+
+# Hosting service
+hosting:
+  replicaCount: 1
+  image:
+    repository: "iicpc-hosting"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "NodePort"
+    ports:
+      - name: http
+        port: 8000
+        targetPort: 8000
+        nodePort: 30000
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+        nodePort: 30051
+  ingress:
+    enabled: false  # Use NodePort for Kind
+    className: ""
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "host.minikube.internal:9092"
+    - name: REDIS_URL
+      value: "host.minikube.internal:6379"
+    - name: TIMESCALEDB_DSN
+      value: "postgresql://iicpc:secret@host.minikube.internal:5432/iicpc"
+
+# Bot fleet service
+botfleet:
+  replicaCount: 1
+  image:
+    repository: "iicpc-botfleet"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "host.minikube.internal:9092"
+    - name: RESULTS_TOPIC
+      value: "botfleet.results"
+    - name: FLEET_CONFIG_PATH
+      value: "/config/fleet-config.json"
+
+# Evaluation service
+evaluation:
+  replicaCount: 1
+  image:
+    repository: "iicpc-evaluation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "NodePort"
+    ports:
+      - name: http
+        port: 8001
+        targetPort: 8001
+        nodePort: 30001
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+        nodePort: 30052
+  ingress:
+    enabled: false  # Use NodePort for Kind
+    className: ""
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "host.minikube.internal:9092"
+    - name: TIMESCALEDB_DSN
+      value: "postgresql://iicpc:secret@host.minikube.internal:5432/iicpc"
+
+# Federation service
+federation:
+  replicaCount: 1
+  image:
+    repository: "iicpc-federation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: raft
+        port: 50052
+        targetPort: 50052
+      - name: metrics
+        port: 50053
+        targetPort: 50053
+  persistence:
+    enabled: true
+    size: 2Gi  # Smaller for Kind
+    storageClass: "hostpath"
+    accessMode: "ReadWriteOnce"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  env:
+    - name: NODE_ID
+      valueFrom:
+        fieldRef:
+          fieldPath: "metadata.name"
+    - name: CLUSTER_PEERS
+      value: "federation-1:50052,federation-2:50052,federation-3:50052"
+
+# Governance service
+governance:
+  replicaCount: 1
+  image:
+    repository: "iicpc-governance"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "NodePort"
+    ports:
+      - name: http
+        port: 8002
+        targetPort: 8002
+        nodePort: 30002
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+        nodePort: 30053
+  ingress:
+    enabled: false  # Use NodePort for Kind
+    className: ""
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "host.minikube.internal:9092"
+    - name: REDIS_URL
+      value: "host.minikube.internal:6379"
+    - name: TIMESCALEDB_DSN
+      value: "postgresql://iicpc:secret@host.minikube.internal:5432/iicpc"
+
+# Strategic service
+strategic:
+  replicaCount: 1
+  image:
+    repository: "iicpc-strategic"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "NodePort"
+    ports:
+      - name: http
+        port: 8003
+        targetPort: 8003
+        nodePort: 30003
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+        nodePort: 30054
+  ingress:
+    enabled: false  # Use NodePort for Kind
+    className: ""
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "host.minikube.internal:9092"
+    - name: TIMESCALEDB_DSN
+      value: "postgresql://iicpc:secret@host.minikube.internal:5432/iicpc"
+
+# Dashboard service
+dashboard:
+  replicaCount: 1
+  image:
+    repository: "iicpc-dashboard"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "NodePort"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+        nodePort: 30004
+  ingress:
+    enabled: false  # Use NodePort for Kind
+    className: ""
+  resources:
+    limits:
+      cpu: 250m
+      memory: 512Mi
+    requests:
+      cpu: 125m
+      memory: 256Mi
+
+# External services (all disabled for Kind)
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+kafka:
+  enabled: false
+
+timescaledb:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+grafana:
+  enabled: false
+
+loki:
+  enabled: false
+
+tempo:
+  enabled: false
+
+nginx-ingress:
+  enabled: false
+
+cert-manager:
+  enabled: false
+
+# ConfigMaps
+configMaps:
+  iicpc:
+    fleet-config:
+      bot_fleet:
+        num_bots: 100
+        num_workers: 4
+        events_per_second: 1000
+        duration_seconds: 60
+        seed: 12345
+        regime: "normal"
+        target_endpoint: "http://host.minikube.internal:30000/api"
+        strategies:
+          - "RandomTrader"
+          - "MarketMaker"
+        bot_params:
+          RandomTrader:
+            max_position: 100
+            order_rate: 10
+          MarketMaker:
+            max_position: 200
+            order_rate: 5
+    benchmark-config:
+      profiles:
+        - id: "test"
+          name: "Test Profile"
+          target_qps: 1000
+          duration_seconds: 60
+          expected_latency_p99: 100
+          warmup_seconds: 10

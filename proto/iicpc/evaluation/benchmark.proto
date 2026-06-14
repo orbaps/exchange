@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package iicpc.evaluation;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/evaluation";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+
+// Benchmark profile configuration
+message BenchmarkProfile {
+  string profile_id = 1;
+  string name = 2;
+  string description = 3;
+  double target_qps = 4;
+  int64 duration_seconds = 5;
+  double expected_latency_p99 = 6;
+  int32 warmup_seconds = 7;
+  int32 cooldown_seconds = 8;
+  map<string, string> parameters = 9;
+}
+
+// Scenario definition
+message ScenarioDefinition {
+  string scenario_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated ScenarioStep steps = 4;
+  int64 seed = 5;
+}
+
+message ScenarioStep {
+  string step_id = 1;
+  enum StepType {
+    STEP_TYPE_UNSPECIFIED = 0;
+    LOAD = 1;
+    PAUSE = 2;
+    CHAOS = 3;
+    VALIDATION = 4;
+  }
+  StepType type = 2;
+  int64 duration_seconds = 3;
+  double intensity = 4;           // 0.0 - 1.0
+  map<string, string> config = 5;
+}
+
+// Benchmark request
+message RunBenchmarkRequest {
+  BenchmarkProfile profile = 1;
+  ScenarioDefinition scenario = 2;
+  string contestant_endpoint = 3;
+  string reference_endpoint = 4;
+}
+
+// Benchmark result
+message BenchmarkResult {
+  string run_id = 1;
+  string profile_id = 2;
+  string scenario_id = 3;
+  enum RunStatus {
+    RUN_STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    RUNNING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+  }
+  RunStatus status = 4;
+  int64 start_time_ns = 5;
+  int64 end_time_ns = 6;
+  
+  // Throughput metrics
+  double qps_achieved = 7;
+  double peak_qps = 8;
+  double sustained_qps = 9;
+  
+  // Latency metrics (nanoseconds)
+  double latency_p50_ns = 10;
+  double latency_p90_ns = 11;
+  double latency_p99_ns = 12;
+  double latency_p999_ns = 13;
+  double latency_mean_ns = 14;
+  double latency_stddev_ns = 15;
+  
+  // Correctness
+  double correctness_score = 16;
+  int64 total_orders = 17;
+  int64 matched_orders = 18;
+  int64 rejected_orders = 19;
+  int64 validation_errors = 20;
+  
+  // Stability
+  double error_rate = 21;
+  int64 chaos_events_handled = 22;
+  int64 chaos_events_total = 23;
+  
+  // Fingerprint for reproducibility
+  string fingerprint = 24;
+  string error = 25;
+}
+
+// Benchmark service
+service Benchmark {
+  // Run a benchmark
+  rpc RunBenchmark(RunBenchmarkRequest) returns (BenchmarkResult);
+  
+  // Get benchmark status
+  rpc GetBenchmarkStatus(BenchmarkStatusRequest) returns (BenchmarkResult);
+  
+  // List benchmarks
+  rpc ListBenchmarks(ListBenchmarksRequest) returns (ListBenchmarksResponse);
+  
+  // Cancel benchmark
+  rpc CancelBenchmark(BenchmarkStatusRequest) returns (BenchmarkResult);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+message BenchmarkStatusRequest {
+  string run_id = 1;
+}
+
+message ListBenchmarksRequest {
+  int32 page_size = 1;
+  int32 page_token = 2;
+  string status_filter = 3;
+}
+
+message ListBenchmarksResponse {
+  repeated BenchmarkResult results = 1;
+  string next_page_token = 2;
+}

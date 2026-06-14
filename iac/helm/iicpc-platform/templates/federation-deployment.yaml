@@ -1,0 +1,59 @@
+# Federation service deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-federation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: federation
+spec:
+  replicas: {{ .Values.federation.replicaCount }}
+  selector:
+    matchLabels:
+      app: federation
+  template:
+    metadata:
+      labels:
+        app: federation
+      annotations:
+        kubectl.kubernetes.io/default-container: "federation"
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- include "iicpc.imagePullSecrets" . | nindent 8 }}
+      containers:
+        - name: federation
+          image: "{{ .Values.federation.image.repository }}:{{ .Values.federation.image.tag }}"
+          imagePullPolicy: {{ .Values.federation.image.pullPolicy }}
+          ports:
+            - name: raft
+              containerPort: 50052
+              protocol: TCP
+            - name: metrics
+              containerPort: 50053
+              protocol: TCP
+          env:
+            {{- range .Values.federation.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: "{{ .value }}"
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "iicpc.fullname" . }}-federation-pvc

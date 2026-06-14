@@ -1,0 +1,5 @@
+# Requirements for generated gRPC Python code
+# This file is auto-generated - do not edit manually
+
+grpcio>=1.62.0
+protobuf>=4.25.0

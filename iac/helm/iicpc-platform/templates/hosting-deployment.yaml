@@ -1,0 +1,75 @@
+# Hosting service deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-hosting
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: hosting
+spec:
+  replicas: {{ .Values.hosting.replicaCount }}
+  selector:
+    matchLabels:
+      app: hosting
+  template:
+    metadata:
+      labels:
+        app: hosting
+      annotations:
+        kubectl.kubernetes.io/default-container: "hosting"
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- include "iicpc.imagePullSecrets" . | nindent 8 }}
+      containers:
+        - name: hosting
+          image: "{{ .Values.hosting.image.repository }}:{{ .Values.hosting.image.tag }}"
+          imagePullPolicy: {{ .Values.hosting.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            {{- range .Values.hosting.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: "{{ .value }}"
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/hosting
+      volumes:
+        - name: logs
+          emptyDir:
+            medium: Memory

@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package iicpc.federation;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/federation";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+
+// State machine replication
+message StateMachineCommand {
+  string command_id = 1;
+  string command_type = 2;          // e.g., "deploy", "scale", "config"
+  bytes payload = 3;                // Serialized command
+  int64 timestamp_ns = 4;
+  map<string, string> metadata = 5;
+}
+
+message StateMachineResponse {
+  string command_id = 1;
+  bool success = 2;
+  bytes result = 3;
+  string error = 4;
+  int64 timestamp_ns = 5;
+}
+
+// Replication service for state machine
+service Replication {
+  // Propose a command to the state machine
+  rpc Propose(StateMachineCommand) returns (StateMachineResponse);
+  
+  // Read from state machine (linearizable read)
+  rpc Read(StateMachineCommand) returns (StateMachineResponse);
+  
+  // Stream state machine changes
+  rpc Watch(WatchRequest) returns (stream StateMachineResponse);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+message WatchRequest {
+  string key_prefix = 1;
+  int64 start_revision = 2;
+  bool include_history = 3;
+}
+
+// Cluster membership
+message NodeInfo {
+  string node_id = 1;
+  string address = 2;               // host:port
+  enum NodeRole {
+    NODE_ROLE_UNSPECIFIED = 0;
+    VOTER = 1;
+    LEARNER = 2;
+    OBSERVER = 3;
+  }
+  NodeRole role = 3;
+  bool active = 4;
+  map<string, string> metadata = 5;
+}
+
+message MembershipChange {
+  enum ChangeType {
+    CHANGE_TYPE_UNSPECIFIED = 0;
+    ADD_NODE = 1;
+    REMOVE_NODE = 2;
+    UPDATE_NODE = 3;
+    TRANSFER_LEADERSHIP = 4;
+  }
+  ChangeType type = 1;
+  NodeInfo node = 2;
+  string context = 3;
+}
+
+message MembershipChangeResponse {
+  bool success = 1;
+  string error = 2;
+  repeated NodeInfo cluster_nodes = 3;
+}
+
+// Membership service
+service Membership {
+  // Get current cluster membership
+  rpc GetMembership(GetMembershipRequest) returns (GetMembershipResponse);
+  
+  // Propose membership change
+  rpc ProposeChange(MembershipChange) returns (MembershipChangeResponse);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+message GetMembershipRequest {
+  string cluster_id = 1;
+}
+
+message GetMembershipResponse {
+  string cluster_id = 1;
+  repeated NodeInfo nodes = 2;
+  string leader_id = 3;
+  int64 term = 4;
+}

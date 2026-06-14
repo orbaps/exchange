@@ -1,0 +1,85 @@
+{{- if .Values.tempo.enabled }}
+# Tempo deployment (distributed tracing)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-tempo
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.tempo.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: "{{ .Values.tempo.image }}"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "-config.file=/etc/tempo/tempo.yaml"
+          ports:
+            - containerPort: 3200
+              name: http
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+          volumeMounts:
+            - name: tempo-config
+              mountPath: /etc/tempo
+            - name: tempo-data
+              mountPath: /tmp/tempo
+      volumes:
+        - name: tempo-config
+          configMap:
+            name: {{ include "iicpc.fullname" . }}-tempo-config
+        - name: tempo-data
+          emptyDir: {}
+
+---
+# Tempo ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-tempo-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+data:
+  tempo.yaml: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+    ingester:
+      max_block_bytes: 100MB
+      max_block_duration: 10m
+    storage:
+      trace_store:
+        local:
+          path: /tmp/tempo/traces
+    metrics_generator:
+      enabled: true
+      processor:
+        service_graphs:
+          enabled: true
+      storage:
+        remote_write:
+          - url: http://{{ include "iicpc.fullname" . }}-prometheus:9090/api/v1/write
+            send_exemplars: true
+    overrides:
+      metrics_generator_processors: [service-graphs, span-metrics]
+{{- end }}

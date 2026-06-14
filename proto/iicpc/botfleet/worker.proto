@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package iicpc.botfleet;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/botfleet";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+import "iicpc/hosting/container.proto";
+import "iicpc/botfleet/orchestrator.proto";
+
+// Worker generates events and sends to target
+message GenerateEventsRequest {
+  WorkerTask task = 1;
+  string kafka_bootstrap_servers = 2;
+  string results_topic = 3;
+  string events_topic = 4;
+}
+
+// Event batch for streaming
+message EventBatch {
+  string worker_id = 1;
+  int32 batch_id = 2;
+  repeated iicpc.hosting.TradingEvent events = 3;
+  int64 timestamp_ns = 4;
+}
+
+// Bot worker service
+service BotWorker {
+  // Generate events for a worker task
+  rpc GenerateEvents(GenerateEventsRequest) returns (iicpc.botfleet.WorkerResult);
+  
+  // Stream events to Kafka
+  rpc StreamEvents(stream EventBatch) returns (StreamEventsResponse);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+message StreamEventsResponse {
+  bool success = 1;
+  int64 events_accepted = 2;
+  string error = 3;
+}

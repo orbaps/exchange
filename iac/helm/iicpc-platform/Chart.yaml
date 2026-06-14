@@ -1,0 +1,22 @@
+apiVersion: v2
+name: iicpc-platform
+description: IICPC Summer Hackathon 2026 - Distributed Benchmarking and Hosting Platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - iicpc
+  - hackathon
+  - trading
+  - benchmarking
+  - distributed-systems
+maintainers:
+  - name: IICPC Team
+    email: team@iicpc.example.com
+home: https://github.com/iicpc/platform
+sources:
+  - https://github.com/iicpc/platform
+icon: https://raw.githubusercontent.com/iicpc/platform/main/docs/logo.png
+annotations:
+  category: platform
+  license: MIT

@@ -1,0 +1,581 @@
+# Oracle Cloud values for IICPC Platform
+# Optimized for Oracle Cloud Always Free tier
+
+replicaCount: 3
+
+imagePullSecrets: []
+nameOverride: ""
+suffix: ""
+fullnameOverride: ""
+
+# Resource limits for Oracle Cloud Always Free (4 cores, 24GB RAM)
+resources:
+  limits:
+    cpu: 4000m
+    memory: 24Gi
+  requests:
+    cpu: 2000m
+    memory: 12Gi
+
+# Autoscaling for Oracle Cloud
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod affinity for Oracle Cloud
+nodeSelector: {}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: workload
+              operator: In
+              values: ["general", "botfleet", "federation"]
+
+# Global configuration for Oracle Cloud
+global:
+  # Use managed services (Oracle Cloud)
+  postgresql:
+    host: "ocid1.database.oc1..example.oraclecloud.com"
+    port: 1521
+    database: "IICPC"
+    username: "iicpc_admin"
+    password: "secret"
+  redis:
+    host: "ocid1.redis.oc1..example.oraclecloud.com"
+    port: 6379
+    password: "secret"
+  kafka:
+    bootstrap_servers: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    sasl_username: "iicpc_user"
+    sasl_password: "secret"
+  timescaledb:
+    host: "ocid1.db.oc1..example.oraclecloud.com"
+    port: 1521
+    database: "IICPC_TIMESERIES"
+    username: "iicpc_admin"
+    password: "secret"
+
+# Hosting service
+hosting:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-hosting"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "LoadBalancer"
+    ports:
+      - name: http
+        port: 8000
+        targetPort: 8000
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "hosting.iicpc.oracledomain.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "hosting-tls"
+        hosts:
+          - "hosting.iicpc.oracledomain.com"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    - name: REDIS_URL
+      value: "ocid1.redis.oc1..example.oraclecloud.com:6379"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Bot fleet service
+botfleet:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-botfleet"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    - name: RESULTS_TOPIC
+      value: "botfleet.results"
+    - name: FLEET_CONFIG_PATH
+      value: "/config/fleet-config.json"
+
+# Evaluation service
+evaluation:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-evaluation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "LoadBalancer"
+    ports:
+      - name: http
+        port: 8001
+        targetPort: 8001
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "evaluation.iicpc.oracledomain.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "evaluation-tls"
+        hosts:
+          - "evaluation.iicpc.oracledomain.com"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Federation service
+federation:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-federation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: raft
+        port: 50052
+        targetPort: 50052
+      - name: metrics
+        port: 50053
+        targetPort: 50053
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "oci-bastion-iscsi"
+    accessMode: "ReadWriteOnce"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: NODE_ID
+      valueFrom:
+        fieldRef:
+          fieldPath: "metadata.name"
+    - name: CLUSTER_PEERS
+      value: "federation-1:50052,federation-2:50052,federation-3:50052"
+
+# Governance service
+governance:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-governance"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "LoadBalancer"
+    ports:
+      - name: http
+        port: 8002
+        targetPort: 8002
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "governance.iicpc.oracledomain.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "governance-tls"
+        hosts:
+          - "governance.iicpc.oracledomain.com"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    - name: REDIS_URL
+      value: "ocid1.redis.oc1..example.oraclecloud.com:6379"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Strategic service
+strategic:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-strategic"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "LoadBalancer"
+    ports:
+      - name: http
+        port: 8003
+        targetPort: 8003
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "50"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "strategic.iicpc.oracledomain.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "strategic-tls"
+        hosts:
+          - "strategic.iicpc.oracledomain.com"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "ocid1.kafka.oc1..example.oraclecloud.com:9092"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Dashboard service
+dashboard:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-dashboard"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "LoadBalancer"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "iicpc.oracledomain.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "dashboard-tls"
+        hosts:
+          - "iicpc.oracledomain.com"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Managed services (Oracle Cloud)
+postgresql:
+  enabled: true
+  image: "oracle/database:19.9.0"
+  postgresPassword: "secret"
+  postgresqlDataDir: "/opt/oracle/oradata"
+  existingSecret: ""
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "oci-bastion-iscsi"
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 7
+
+redis:
+  enabled: true
+  image: "oracle/database/redis:7.0.5"
+  auth: "secret"
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "oci-bastion-iscsi"
+  sentinel:
+    enabled: true
+    replicas: 2
+
+kafka:
+  enabled: true
+  image: "confluentinc/cp-kafka:7.4.0"
+  listeners: "PLAINTEXT://:9092,INTERNAL://:29092,SASL_SSL://:9093"
+  interBrokerListenerName: "INTERNAL"
+  zookeeper:
+    enabled: true
+    image: "oracle/database/zookeeper:3.9.0"
+    replicas: 3
+  persistence:
+    size: 50Gi
+    storageClass: "oci-bastion-iscsi"
+  topics:
+    - name: "botfleet.events"
+      partitions: 10
+      replicas: 3
+    - name: "botfleet.results"
+      partitions: 5
+      replicas: 3
+    - name: "telemetry.raw"
+      partitions: 20
+      replicas: 3
+    - name: "telemetry.aggregates"
+      partitions: 10
+      replicas: 3
+
+# Oracle Cloud managed TimescaleDB
+timescaledb:
+  enabled: true
+  image: "oracle/database/timescale:16.3"
+  postgresPassword: "secret"
+  persistence:
+    enabled: true
+    size: 200Gi
+    storageClass: "oci-bastion-iscsi"
+  metrics:
+    enabled: true
+    exporters:
+      - prometheus
+      - pg_stat_statements
+
+# Oracle Cloud managed monitoring
+prometheus:
+  enabled: true
+  image: "oracle/monitoring/prometheus:2.45.0"
+  retention: 90d
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  additionalScrapeConfigs: |
+    - job_name: 'iicpc-services'
+      static_configs:
+        - targets: ['localhost:9090', 'localhost:9091', 'localhost:9092', 'localhost:9093']
+
+# Grafana
+grafana:
+  enabled: true
+  image: "oracle/monitoring/grafana:10.2.0"
+  adminPassword: "admin"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Oracle Cloud managed Loki
+loki:
+  enabled: true
+  image: "oracle/logging/loki:2.8.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Oracle Cloud managed Tempo
+tempo:
+  enabled: true
+  image: "oracle/tracing/tempo:2.2.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Oracle Cloud managed NGINX Ingress
+nginx-ingress:
+  enabled: true
+  controller:
+    image:
+      repository: "oracle/nginx-ingress-controller:1.9.3"
+      tag: "v1.9.3"
+      pullPolicy: "IfNotPresent"
+    service:
+      type: "LoadBalancer"
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    config:
+      ssl-passthrough: "true"
+      ssl-proxy-protocol: "TLSv1.2,TLSv1.3"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Oracle Cloud managed Cert-Manager
+cert-manager:
+  enabled: true
+  image: "oracle/security/cert-manager:v1.13.2"
+  replicaCount: 3
+  installCRDs: true
+  acme:
+    email: "admin@oracledomain.com"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Oracle Cloud secrets
+secrets:
+  iicpc:
+    type: Opaque
+    stringData:
+      POSTGRES_PASSWORD: "secret"
+      REDIS_PASSWORD: "secret"
+      KAFKA_SASL_PASSWORD: "secret"
+      TIMESCALEDB_PASSWORD: "secret"
+      GRAFANA_PASSWORD: "admin"
+
+# Oracle Cloud configMaps
+configMaps:
+  iicpc:
+    fleet-config:
+      bot_fleet:
+        num_bots: 1000
+        num_workers: 20
+        events_per_second: 10000
+        duration_seconds: 3600
+        seed: 12345
+        regime: "volatile"
+        target_endpoint: "http://iicpc.oracledomain.com/api"
+        strategies:
+          - "RandomTrader"
+          - "MarketMaker"
+          - "MomentumTrader"
+          - "NoiseTrader"
+        bot_params:
+          RandomTrader:
+            max_position: 100
+            order_rate: 10
+          MarketMaker:
+            max_position: 200
+            order_rate: 5
+            spread: 0.01
+          MomentumTrader:
+            max_position: 150
+            order_rate: 8
+            momentum_window: 10
+          NoiseTrader:
+            max_position: 50
+            order_rate: 20
+            noise_level: 0.05
+    benchmark-config:
+      profiles:
+        - id: "high-frequency"
+          name: "High Frequency Trading"
+          target_qps: 10000
+          duration_seconds: 300
+          expected_latency_p99: 100
+          warmup_seconds: 30
+        - id: "low-latency"
+          name: "Low Latency Market Making"
+          target_qps: 1000
+          duration_seconds: 3600
+          expected_latency_p99: 500
+          warmup_seconds: 60
+        - id: "chaos-testing"
+          name: "Chaos Testing"
+          target_qps: 5000
+          duration_seconds: 600
+          expected_latency_p99: 1000
+          warmup_seconds: 30

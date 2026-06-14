@@ -1,0 +1,30 @@
+{{- if .Values.loki.enabled }}
+# Loki ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-loki-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+data:
+  loki.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    ingester:
+      max_stream_segment_size: 1024
+      max_chunk_idle: 1h
+    storage_config:
+      filesystem:
+        directory: /tmp/loki/chunks
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v12
+          index:
+            prefix: index_
+            period: 24h
+{{- end }}

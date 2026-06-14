@@ -1,0 +1,620 @@
+# Default values for IICPC Platform
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates
+
+replicaCount: 3
+
+imagePullSecrets: []
+nameOverride: ""
+suffix: ""
+fullnameOverride: ""
+
+# Service account configuration
+serviceAccount:
+  # Specifies the Service Account to use for pods
+  create: true
+  name: ""
+  annotations: {}
+  iamRole: ""  # AWS IAM role for EKS
+
+# Pod security context
+securityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Horizontal pod autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod affinity/anti-affinity
+nodeSelector: {}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: workload
+              operator: In
+              values: ["general", "botfleet", "federation"]
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: ["hosting", "evaluation", "federation", "governance", "strategic"]
+          topologyKey: kubernetes.io/hostname
+
+# Global configuration
+global:
+  # External managed services (uncomment to use)
+  # postgresql:
+  #   host: "postgres.example.com"
+  #   port: 5432
+  #   database: "iicpc"
+  #   username: "iicpc"
+  #   password: "secret"
+  # redis:
+  #   host: "redis.example.com"
+  #   port: 6379
+  #   password: "secret"
+  # kafka:
+  #   bootstrap_servers: "kafka.example.com:9092"
+  #   sasl_username: "user"
+  #   sasl_password: "secret"
+  # timescaledb:
+  #   host: "timescale.example.com"
+  #   port: 5432
+  #   database: "iicpc"
+  #   username: "iicpc"
+  #   password: "secret"
+
+# Hosting service
+hosting:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-hosting"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8000
+        targetPort: 8000
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "hosting.iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "hosting-tls"
+        hosts:
+          - "hosting.iicpc.local"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: REDIS_URL
+      value: "redis://redis:6379/0"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Bot fleet service
+botfleet:
+  replicaCount: 1
+  image:
+    repository: "ghcr.io/iicpc/iicpc-botfleet"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: RESULTS_TOPIC
+      value: "botfleet.results"
+    - name: FLEET_CONFIG_PATH
+      value: "/config/fleet-config.json"
+
+# Evaluation service
+evaluation:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-evaluation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8001
+        targetPort: 8001
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "evaluation.iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "evaluation-tls"
+        hosts:
+          - "evaluation.iicpc.local"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Federation service
+federation:
+  replicaCount: 3
+  image:
+    repository: "ghcr.io/iicpc/iicpc-federation"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: raft
+        port: 50052
+        targetPort: 50052
+      - name: metrics
+        port: 50053
+        targetPort: 50053
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "fast-ssd"
+    accessMode: "ReadWriteOnce"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: NODE_ID
+      valueFrom:
+        fieldRef:
+          fieldPath: "metadata.name"
+    - name: CLUSTER_PEERS
+      value: "federation-1:50052,federation-2:50052,federation-3:50052"
+
+# Governance service
+governance:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-governance"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8002
+        targetPort: 8002
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "governance.iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "governance-tls"
+        hosts:
+          - "governance.iicpc.local"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: REDIS_URL
+      value: "redis://redis:6379/0"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Strategic service
+strategic:
+  replicaCount: 1
+  image:
+    repository: "ghcr.io/iicpc/iicpc-strategic"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8003
+        targetPort: 8003
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "50"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "strategic.iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "strategic-tls"
+        hosts:
+          - "strategic.iicpc.local"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+
+# Dashboard service
+dashboard:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/iicpc/iicpc-dashboard"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "dashboard-tls"
+        hosts:
+          - "iicpc.local"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# External services (uncomment to use managed versions)
+postgresql:
+  enabled: false
+  image: "postgres:15-alpine"
+  postgresPassword: "secret"
+  postgresqlDataDir: "/var/lib/postgresql/data"
+  existingSecret: ""
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "fast-ssd"
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 7
+
+redis:
+  enabled: false
+  image: "redis:7-alpine"
+  auth: "secret"
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+  sentinel:
+    enabled: true
+    replicas: 2
+
+kafka:
+  enabled: false
+  image: "confluentinc/cp-kafka:7.4.0"
+  listeners: "PLAINTEXT://:9092,INTERNAL://:29092"
+  interBrokerListenerName: "INTERNAL"
+  zookeeper:
+    enabled: true
+    image: "zookeeper:3.9.0"
+    replicas: 3
+  topics:
+    - name: "botfleet.events"
+      partitions: 10
+      replicas: 3
+    - name: "botfleet.results"
+      partitions: 5
+      replicas: 3
+    - name: "telemetry.raw"
+      partitions: 20
+      replicas: 3
+    - name: "telemetry.aggregates"
+      partitions: 10
+      replicas: 3
+
+# Monitoring stack
+timescaledb:
+  enabled: false
+  image: "timescale/timescaledb:latest-pg16"
+  postgresPassword: "secret"
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: "fast-ssd"
+  metrics:
+    enabled: true
+    exporters:
+      - prometheus
+      - pg_stat_statements
+
+prometheus:
+  enabled: true
+  image: "prom/prometheus:v2.45.0"
+  retention: 30d
+  storageSize: 30Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  additionalScrapeConfigs: |
+    - job_name: 'iicpc-services'
+      static_configs:
+        - targets: ['localhost:9090', 'localhost:9091', 'localhost:9092', 'localhost:9093']
+
+# Grafana
+grafana:
+  enabled: true
+  image: "grafana/grafana:10.2.0"
+  adminPassword: "admin"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+      access: proxy
+
+# Loki for logs
+loki:
+  enabled: true
+  image: "grafana/loki:2.8.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Tempo for traces
+tempo:
+  enabled: true
+  image: "grafana/tempo:2.2.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Jaeger for distributed tracing UI
+jaeger:
+  enabled: false
+  image: "jaegertracing/all-in-one:1.50"
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# NGINX Ingress
+nginx-ingress:
+  enabled: true
+  controller:
+    image:
+      repository: "k8s.gcr.io/ingress-nginx/controller-v1.9.3"
+      tag: "v1.9.3"
+      pullPolicy: "IfNotPresent"
+    service:
+      type: "LoadBalancer"
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    config:
+      ssl-passthrough: "true"
+      ssl-proxy-protocol: "TLSv1.2,TLSv1.3"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Cert-Manager for TLS
+cert-manager:
+  enabled: true
+  image: "quay.io/jetstack/cert-manager:v1.13.2"
+  replicaCount: 3
+  installCRDs: true
+  acme:
+    email: "admin@example.com"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Secrets
+secrets:
+  iicpc:
+    type: Opaque
+    stringData:
+      POSTGRES_PASSWORD: "secret"
+      REDIS_PASSWORD: "secret"
+      KAFKA_SASL_PASSWORD: "secret"
+      TIMESCALEDB_PASSWORD: "secret"
+      GRAFANA_PASSWORD: "admin"
+
+# ConfigMaps
+configMaps:
+  iicpc:
+    fleet-config:
+      bot_fleet:
+        num_bots: 1000
+        num_workers: 20
+        events_per_second: 10000
+        duration_seconds: 3600
+        seed: 12345
+        regime: "volatile"
+        target_endpoint: "http://hosting.iicpc.local/api"
+        strategies:
+          - "RandomTrader"
+          - "MarketMaker"
+          - "MomentumTrader"
+          - "NoiseTrader"
+        bot_params:
+          RandomTrader:
+            max_position: 100
+            order_rate: 10
+          MarketMaker:
+            max_position: 200
+            order_rate: 5
+            spread: 0.01
+          MomentumTrader:
+            max_position: 150
+            order_rate: 8
+            momentum_window: 10
+          NoiseTrader:
+            max_position: 50
+            order_rate: 20
+            noise_level: 0.05
+    benchmark-config:
+      profiles:
+        - id: "high-frequency"
+          name: "High Frequency Trading"
+          target_qps: 10000
+          duration_seconds: 300
+          expected_latency_p99: 100
+          warmup_seconds: 30
+        - id: "low-latency"
+          name: "Low Latency Market Making"
+          target_qps: 1000
+          duration_seconds: 3600
+          expected_latency_p99: 500
+          warmup_seconds: 60
+        - id: "chaos-testing"
+          name: "Chaos Testing"
+          target_qps: 5000
+          duration_seconds: 600
+          expected_latency_p99: 1000
+          warmup_seconds: 30

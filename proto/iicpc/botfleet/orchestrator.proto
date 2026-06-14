@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package iicpc.botfleet;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/botfleet";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+
+// Fleet configuration
+message FleetConfig {
+  string fleet_id = 1;
+  int32 num_bots = 2;
+  int32 num_workers = 3;              // K8s Job parallelism
+  double events_per_second = 4;       // Total target EPS
+  int64 duration_seconds = 5;
+  int64 seed = 6;
+  string regime = 7;                  // normal, volatile, crash, flash_crash
+  string target_endpoint = 8;         // Hosting endpoint to attack
+  map<string, string> bot_params = 9; // Strategy-specific params
+}
+
+// Bot configuration
+message BotConfig {
+  string bot_id = 1;
+  string strategy = 2;                // RandomTrader, MarketMaker, MomentumTrader, NoiseTrader
+  double order_rate = 3;              // Orders per second per bot
+  int64 max_position = 4;
+  string instrument = 5;
+  string regime = 6;
+  map<string, string> params = 7;     // Strategy-specific
+}
+
+// Worker task
+message WorkerTask {
+  int32 worker_id = 1;
+  repeated BotConfig bots = 2;
+  int64 seed = 3;
+  double duration_seconds = 4;
+}
+
+// Fleet generation result
+message FleetResult {
+  string fleet_id = 1;
+  enum FleetStatus {
+    FLEET_STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    RUNNING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+  }
+  FleetStatus status = 2;
+  int64 start_time_ns = 3;
+  int64 end_time_ns = 4;
+  int64 total_events_generated = 5;
+  double actual_eps = 6;
+  repeated WorkerResult worker_results = 7;
+  string error = 8;
+}
+
+message WorkerResult {
+  int32 worker_id = 1;
+  int64 events_generated = 2;
+  double duration_ms = 3;
+  string error = 4;
+}
+
+// Bot fleet orchestrator service
+service BotFleetOrchestrator {
+  // Start a new bot fleet
+  rpc StartFleet(FleetConfig) returns (FleetResult);
+  
+  // Get fleet status
+  rpc GetFleetStatus(FleetStatusRequest) returns (FleetResult);
+  
+  // Stop fleet
+  rpc StopFleet(FleetStatusRequest) returns (FleetResult);
+  
+  // List all fleets
+  rpc ListFleets(ListFleetsRequest) returns (ListFleetsResponse);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+message FleetStatusRequest {
+  string fleet_id = 1;
+}
+
+message ListFleetsRequest {
+  bool only_active = 1;
+}
+
+message ListFleetsResponse {
+  repeated FleetResult fleets = 1;
+}

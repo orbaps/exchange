@@ -1,0 +1,18 @@
+# Federation persistent volume claim
+{{- if .Values.federation.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "iicpc.fullname" . }}-federation-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: federation
+spec:
+  accessModes:
+    - {{ .Values.federation.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.federation.persistence.size }}
+  storageClassName: {{ .Values.federation.persistence.storageClass }}
+{{- end }}

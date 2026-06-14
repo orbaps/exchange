@@ -1,0 +1,18 @@
+# Botfleet service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iicpc.fullname" . }}-botfleet
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: botfleet
+spec:
+  type: {{ .Values.botfleet.service.type }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: botfleet

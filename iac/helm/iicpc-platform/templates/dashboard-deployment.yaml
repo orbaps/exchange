@@ -1,0 +1,49 @@
+# Dashboard service deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: dashboard
+spec:
+  replicas: {{ .Values.dashboard.replicaCount }}
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+      annotations:
+        kubectl.kubernetes.io/default-container: "dashboard"
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- include "iicpc.imagePullSecrets" . | nindent 8 }}
+      containers:
+        - name: dashboard
+          image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag }}"
+          imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ (index .Values.dashboard.service.ports 0).port }}"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/dashboard
+      volumes:
+        - name: logs
+          emptyDir:
+            medium: Memory

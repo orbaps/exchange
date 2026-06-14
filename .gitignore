@@ -10,3 +10,9 @@ New Text Document.txt
 test_exec_1.jsonl
 test_exec_4.jsonl
 *.log
+
+# Terraform
+*.tfstate*
+.terraform/
+*.tfvars
+!*.tfvars.example

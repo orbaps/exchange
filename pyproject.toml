@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iicpc-platform"
+version = "0.1.0"
+description = "IICPC Distributed Benchmarking and Hosting Platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "aioredis>=2.0.1",
+    "asyncpg>=0.29.0",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13.0",
+    "psycopg2-binary>=2.9.9",
+    "aiokafka>=0.10.0",
+    "kafka-python-ng>=2.2.2",
+    "grpcio>=1.62.0",
+    "grpcio-tools>=1.62.0",
+    "protobuf>=4.25.0",
+    "kubernetes>=30.0.0",
+    "prometheus-client>=0.19.0",
+    "structlog>=24.1.0",
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp>=1.24.0",
+    "msgpack>=1.0.8",
+    "orjson>=3.10.0",
+    "pyyaml>=6.0.1",
+    "cryptography>=42.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0.1",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "tenacity>=8.2.3",
+]
+
+[tool.setuptools]
+packages = [
+    "analytics",
+    "benchmarking",
+    "bot_fleet",
+    "botfleet",
+    "campaign",
+    "contracts",
+    "contestant_sandbox",
+    "dashboard",
+    "demo",
+    "docs_generator",
+    "evaluation",
+    "execution",
+    "federation",
+    "gateway",
+    "generated",
+    "gitops",
+    "governance",
+    "hosting",
+    "leaderboard",
+    "orchestration",
+    "packaging",
+    "performance",
+    "reference_engine",
+    "reports",
+    "sandbox",
+    "scoring",
+    "sdk",
+    "sequencer",
+    "strategic",
+    "submission",
+    "telemetry",
+    "tournament",
+    "validation",
+    "validation_engine",
+]
+
+[tool.setuptools.packages.find]
+include = ["*"]
+exclude = ["tests*", "docs*", "frontend*", "proto*", "scripts*", "iac*"]

@@ -1,0 +1,36 @@
+# Required: OCI authentication
+tenancy_ocid      = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+user_ocid         = "ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+fingerprint       = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+private_key_path  = "~/.oci/oci_api_key.pem"
+
+# Required: Compartment
+compartment_ocid  = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Required: Environment (dev / staging / production)
+environment       = "dev"
+
+# Free tier mode (default: true — uses ARM compute instances)
+free_tier_arm_instances = true
+
+# Required when free_tier_arm_instances = true
+# Find with: `oci iam availability-domain list --compartment-id <compartment_ocid>`
+availability_domain = ""
+
+# Required when free_tier_arm_instances = true
+# Map of service names to instance OCIDs for volume attachments
+# Find with: `oci compute instance list --compartment-id <compartment_ocid>`
+free_tier_instance_ids = {
+  timescaledb = ""
+  kafka       = ""
+  prometheus  = ""
+}
+
+# Optional overrides
+# region            = "us-ashburn-1"
+# vcn_cidr          = "10.0.0.0/16"
+# kubernetes_version = "v1.28.2"
+# node_pool_shape   = "VM.Standard.E4.Flex"
+# node_pool_ocpus   = 2
+# node_pool_memory_gb = 16
+# node_pool_size    = 3

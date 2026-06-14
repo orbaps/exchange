@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package iicpc.hosting;
+
+option go_package = "github.com/iicpc/platform/gen/go/iicpc/hosting";
+
+import "iicpc/common/health.proto";
+import "iicpc/common/metrics.proto";
+
+option cc_enable_arenas = true;
+
+// Resource profile for container deployment
+message ResourceProfile {
+  enum ProfileType {
+    PROFILE_TYPE_UNSPECIFIED = 0;
+    SMALL = 1;
+    MEDIUM = 2;
+    LARGE = 3;
+    CUSTOM = 4;
+  }
+  
+  ProfileType type = 1;
+  double cpu_limit = 2;           // vCPUs
+  double memory_limit_mb = 3;     // MB
+  double disk_limit_mb = 4;       // MB
+  int64 execution_timeout_sec = 5;
+}
+
+// Submission manifest for deployment
+message SubmissionManifest {
+  string submission_id = 1;
+  string team_name = 2;
+  string version = 3;
+  string language = 4;            // python, rust, cpp, go
+  string entrypoint = 5;          // main.py, main.rs, etc.
+  string build_command = 6;       // Build command
+  string run_command = 7;         // Run command
+  ResourceProfile resource_profile = 8;
+  string source_path = 9;         // Path to source code
+  map<string, string> env_vars = 10;
+}
+
+// Build result
+message BuildResult {
+  string build_id = 1;
+  string submission_id = 2;
+  enum BuildStatus {
+    BUILD_STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    BUILDING = 2;
+    SUCCESS = 3;
+    FAILED = 4;
+  }
+  BuildStatus status = 3;
+  double duration_ms = 4;
+  repeated string logs = 5;
+  string artifact_path = 6;
+  string error = 7;
+}
+
+// Deployment request
+message DeployRequest {
+  SubmissionManifest manifest = 1;
+  string build_id = 2;
+}
+
+// Deployment response
+message DeployResponse {
+  string deployment_id = 1;
+  string container_id = 2;
+  string endpoint = 3;            // e.g., local://submission/sub_abc123/v1
+  enum DeployStatus {
+    DEPLOY_STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    DEPLOYING = 2;
+    RUNNING = 3;
+    FAILED = 4;
+  }
+  DeployStatus status = 4;
+  string error = 5;
+}
+
+// Container status
+message ContainerStatus {
+  string container_id = 1;
+  string submission_id = 2;
+  enum ContainerState {
+    CONTAINER_STATE_UNSPECIFIED = 0;
+    CREATED = 1;
+    STARTING = 2;
+    RUNNING = 3;
+    STOPPED = 4;
+    FAILED = 5;
+    TERMINATED = 6;
+  }
+  ContainerState state = 3;
+  int32 restart_count = 4;
+  int32 failure_count = 5;
+  int64 started_at_ns = 6;
+  int64 stopped_at_ns = 7;
+  double cpu_usage = 8;
+  double memory_usage_mb = 9;
+}
+
+// Hosting service
+service Hosting {
+  // Build submission
+  rpc Build(SubmissionManifest) returns (BuildResult);
+  
+  // Get build status
+  rpc GetBuildStatus(BuildStatusRequest) returns (BuildResult);
+  
+  // Deploy container
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+  
+  // Get deployment status
+  rpc GetDeploymentStatus(DeploymentStatusRequest) returns (DeployResponse);
+  
+  // List running containers
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
+  
+  // Stop container
+  rpc StopContainer(StopContainerRequest) returns (StopContainerResponse);
+  
+  // Restart container
+  rpc RestartContainer(RestartContainerRequest) returns (RestartContainerResponse);
+  
+  // Destroy container
+  rpc DestroyContainer(DestroyContainerRequest) returns (DestroyContainerResponse);
+  
+  // Health check
+  rpc Health(iicpc.common.HealthCheckRequest) returns (iicpc.common.HealthCheckResponse);
+  
+  // Metrics
+  rpc Metrics(iicpc.common.MetricsRequest) returns (iicpc.common.MetricsResponse);
+}
+
+// Request/Response types
+message BuildStatusRequest {
+  string build_id = 1;
+}
+
+message DeploymentStatusRequest {
+  string deployment_id = 1;
+}
+
+message ListContainersRequest {
+  bool only_running = 1;
+}
+
+message ListContainersResponse {
+  repeated ContainerStatus containers = 1;
+}
+
+message StopContainerRequest {
+  string container_id = 1;
+}
+
+message StopContainerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message RestartContainerRequest {
+  string container_id = 1;
+}
+
+message RestartContainerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message DestroyContainerRequest {
+  string container_id = 1;
+}
+
+message DestroyContainerResponse {
+  bool success = 1;
+  string error = 2;
+}

@@ -1,0 +1,17 @@
+version: v2
+modules:
+  - path: iicpc
+    name: buf.build/iicpc/platform
+lint:
+  use:
+    - DEFAULT
+    - COMMENTS
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - FIELD_NOT_REQUIRED
+breaking:
+  use:
+    - FILE
+  ignore:
+    - iicpc/common/health.proto
+    - iicpc/common/metrics.proto

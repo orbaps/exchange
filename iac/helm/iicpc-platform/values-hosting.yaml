@@ -1,0 +1,65 @@
+# Hosting service specific values
+# Override default values for the hosting service
+hosting:
+  replicaCount: 5
+  image:
+    repository: "ghcr.io/iicpc/iicpc-hosting"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        port: 8000
+        targetPort: 8000
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: "hosting.iicpc.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "hosting-tls"
+        hosts:
+          - "hosting.iicpc.local"
+  resources:
+    limits:
+      cpu: 1500m
+      memory: 3Gi
+    requests:
+      cpu: 750m
+      memory: 1.5Gi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka:9092"
+    - name: REDIS_URL
+      value: "redis://redis:6379/0"
+    - name: TIMESCALEDB_DSN
+      valueFrom:
+        secretKeyRef:
+          name: "iicpc-secrets"
+          key: "TIMESCALEDB_DSN"
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3

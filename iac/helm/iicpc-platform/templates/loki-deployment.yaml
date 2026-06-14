@@ -1,0 +1,60 @@
+{{- if .Values.loki.enabled }}
+# Loki deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.loki.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: "{{ .Values.loki.image }}"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "-config.file=/etc/loki/loki.yaml"
+          ports:
+            - containerPort: 3100
+              name: http
+          volumeMounts:
+            - name: loki-config
+              mountPath: /etc/loki
+            - name: loki-data
+              mountPath: /tmp/loki
+      volumes:
+        - name: loki-config
+          configMap:
+            name: {{ include "iicpc.fullname" . }}-loki-config
+        - name: loki-data
+          emptyDir: {}
+
+---
+# Loki Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iicpc.fullname" . }}-loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: loki
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: loki
+{{- end }}

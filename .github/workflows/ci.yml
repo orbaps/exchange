@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  proto-lint:
+    name: Protobuf Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-lint-action@v1
+        working-directory: proto
+      - uses: bufbuild/buf-breaking-action@v1
+        with:
+          against: https://github.com/${{ github.repository }}.git#branch=main
+        working-directory: proto
+
+  python-checks:
+    name: Python Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install ruff mypy pytest pytest-asyncio pytest-cov httpx
+      - run: ruff check . --output-format=github
+      - run: ruff format . --check
+      - name: Run tests
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pytest tests/ -v --cov=. --cov-report=xml --cov-report=term
+      - uses: codecov/codecov-action@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  frontend-checks:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefer-offline --no-audit
+      - run: npm run lint
+      - run: npm run build
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - hosting
+          - botfleet
+          - evaluation
+          - federation
+          - governance
+          - strategic
+          - dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: iac/docker/Dockerfile.${{ matrix.service }}
+          push: false
+          tags: ghcr.io/${{ github.repository }}/iicpc-${{ matrix.service }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+      - run: helm lint iac/helm/iicpc-platform
+      - run: helm lint iac/helm/iicpc-platform -f iac/helm/iicpc-platform/values-kind.yaml
+      - run: helm lint iac/helm/iicpc-platform -f iac/helm/iicpc-platform/values-oracle.yaml
+      - run: helm template test-release iac/helm/iicpc-platform -f iac/helm/iicpc-platform/values-kind.yaml > /dev/null

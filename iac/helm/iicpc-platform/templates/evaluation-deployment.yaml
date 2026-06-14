@@ -1,0 +1,75 @@
+# Evaluation service deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-evaluation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: evaluation
+spec:
+  replicas: {{ .Values.evaluation.replicaCount }}
+  selector:
+    matchLabels:
+      app: evaluation
+  template:
+    metadata:
+      labels:
+        app: evaluation
+      annotations:
+        kubectl.kubernetes.io/default-container: "evaluation"
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- include "iicpc.imagePullSecrets" . | nindent 8 }}
+      containers:
+        - name: evaluation
+          image: "{{ .Values.evaluation.image.repository }}:{{ .Values.evaluation.image.tag }}"
+          imagePullPolicy: {{ .Values.evaluation.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            {{- range .Values.evaluation.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: "{{ .value }}"
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/evaluation
+      volumes:
+        - name: logs
+          emptyDir:
+            medium: Memory

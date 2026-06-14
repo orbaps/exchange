@@ -1,0 +1,76 @@
+{{- $certManager := index .Values "cert-manager" -}}
+{{- if $certManager.enabled }}
+# Cert-Manager deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-cert-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: cert-manager
+spec:
+  replicas: {{ $certManager.replicaCount }}
+  selector:
+    matchLabels:
+      app: cert-manager
+  template:
+    metadata:
+      labels:
+        app: cert-manager
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}-cert-manager
+      containers:
+        - name: cert-manager
+          image: "{{ $certManager.image }}"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --v=2
+            - --cluster-resource-namespace=$(POD_NAMESPACE)
+            - --leader-election-namespace=$(POD_NAMESPACE)
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            {{- toYaml $certManager.resources | nindent 12 }}
+
+---
+# ClusterIssuer for Let's Encrypt
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  acme:
+    email: {{ $certManager.acme.email | default "admin@example.com" }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+
+---
+# ClusterIssuer for Let's Encrypt Staging
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+spec:
+  acme:
+    email: {{ $certManager.acme.email | default "admin@example.com" }}
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+{{- end }}

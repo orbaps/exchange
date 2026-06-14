@@ -1,0 +1,71 @@
+# Shared ConfigMap for IICPC Platform
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+data:
+  # Bot fleet configuration
+  fleet-config.json: |
+    {{ index .Values.configMaps.iicpc "fleet-config" | toJson | nindent 4 }}
+
+  # Benchmark configuration
+  benchmark.yaml: |
+    benchmarks:
+    {{- $benchCfg := index .Values.configMaps.iicpc "benchmark-config" -}}
+    {{- range $benchCfg.profiles }}
+      - id: "{{ .id }}"
+        name: "{{ .name }}"
+        target_qps: {{ .target_qps }}
+        duration_seconds: {{ .duration_seconds }}
+        expected_latency_p99: {{ .expected_latency_p99 }}
+        warmup_seconds: {{ .warmup_seconds }}
+    {{- end }}
+
+{{- if .Values.prometheus.enabled }}
+---
+# Prometheus ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-prometheus-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    scrape_configs:
+      - job_name: 'iicpc-services'
+        static_configs:
+          - targets: ['localhost:9090', 'localhost:9091', 'localhost:9092', 'localhost:9093']
+      - job_name: 'botfleet'
+        static_configs:
+          - targets: ['localhost:9094', 'localhost:9095']
+{{- end }}
+
+{{- if .Values.grafana.enabled }}
+---
+# Grafana ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iicpc.fullname" . }}-grafana-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://{{ include "iicpc.fullname" . }}-prometheus:9090
+        access: proxy
+        isDefault: true
+        editable: false
+{{- end }}

@@ -1,0 +1,51 @@
+# Botfleet service deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iicpc.fullname" . }}-botfleet
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iicpc.labels" . | nindent 4 }}
+    app: botfleet
+spec:
+  replicas: {{ .Values.botfleet.replicaCount }}
+  selector:
+    matchLabels:
+      app: botfleet
+  template:
+    metadata:
+      labels:
+        app: botfleet
+      annotations:
+        kubectl.kubernetes.io/default-container: "botfleet"
+    spec:
+      serviceAccountName: {{ include "iicpc.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- include "iicpc.imagePullSecrets" . | nindent 8 }}
+      containers:
+        - name: botfleet
+          image: "{{ .Values.botfleet.image.repository }}:{{ .Values.botfleet.image.tag }}"
+          imagePullPolicy: {{ .Values.botfleet.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            {{- range .Values.botfleet.env }}
+            - name: {{ .name }}
+              value: "{{ .value }}"
+            {{- end }}
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          emptyDir:
+            medium: Memory
