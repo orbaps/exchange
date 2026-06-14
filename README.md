@@ -1,6 +1,5 @@
 <div align="center">
 
-<img src=".github/assets/banner.png" alt="IICPC Exchange Platform" width="100%" />
 
 # 🏛️ Distributed Benchmarking & Hosting Platform
 ### For High-Frequency Trading Infrastructure Evaluation
@@ -473,13 +472,6 @@ This platform explicitly satisfies the criteria set forth in the **IICPC Summer 
 
 ---
 
-## 20. Conclusion
-
-The IICPC Distributed Benchmarking & Hosting Platform represents the pinnacle of modern, cloud-native systems engineering. By combining hardware-virtualized sandboxing, lock-free IPC, high-throughput event streaming, and mathematically rigorous validation, we have created an uncompromising arena for evaluating the next generation of financial trading infrastructure. 
-
-We invite top-tier systems engineers to push the boundaries of performance, and we welcome open-source contributions to further evolve this platform.
-
-**Happy Hacking.**
 
 <div align="center">
 <br/>
