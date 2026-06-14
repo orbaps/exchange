@@ -2,374 +2,261 @@
 
 <img src=".github/assets/banner.png" alt="IICPC Exchange Platform" width="100%" />
 
-# IICPC Exchange
+# 🏛️ IICPC Exchange Platform
 
-### The Open-Source Competitive Matching Engine Arena
+**A Cloud-Native, Distributed Arena for Benchmarking Competitive Trading Engines**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/orbaps/exchange/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/orbaps/exchange/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11+-3776AB.svg?logo=python&logoColor=white)](https://python.org)
-[![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg?logo=docker&logoColor=white)](https://docker.com)
-[![Kubernetes](https://img.shields.io/badge/k8s-native-326CE5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![Kafka](https://img.shields.io/badge/kafka-KRaft-231F20.svg?logo=apachekafka&logoColor=white)](https://kafka.apache.org)
-[![gRPC](https://img.shields.io/badge/gRPC-protobuf-244c5a.svg?logo=google&logoColor=white)](https://grpc.io)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/orbaps/exchange/ci.yml?branch=main&label=Build&logo=githubactions&logoColor=white&style=for-the-badge)](https://github.com/orbaps/exchange/actions)
+[![Python Version](https://img.shields.io/badge/Python-3.11+-3776AB.svg?logo=python&logoColor=white&style=for-the-badge)](https://python.org)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Native-326CE5.svg?logo=kubernetes&logoColor=white&style=for-the-badge)](https://kubernetes.io)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-[**Docs**](docs/) · [**API Reference**](generated/api_docs.md) · [**Quick Start**](#-quick-start) · [**Contributing**](#-contributing) · [**Report Bug**](https://github.com/orbaps/exchange/issues)
+[**Documentation**](docs/) · [**API Reference**](generated/api_docs.md) · [**SDK Guide**](#-contestant-sdk) · [**Report a Bug**](https://github.com/orbaps/exchange/issues)
 
 </div>
 
 ---
 
-**IICPC Exchange** is a production-grade distributed platform where contestants submit matching engine implementations that get sandboxed, stress-tested with deterministic bot fleets, validated against a reference engine, and ranked on a live leaderboard — all with nanosecond-precision fairness guarantees.
+## 🚀 The Vision
 
-> **Think of it as**: A competitive arena for financial exchange engines — like competitive programming, but for order matching and trade execution.
+Traditional benchmarking of trading systems is flawed. It conflates network jitter with engine latency, lacks proper isolation, and fails to simulate realistic, deterministic market conditions.
 
-<br/>
+**IICPC Exchange** changes the game. It is a production-grade, distributed benchmarking arena built for evaluating competitive matching engine implementations. We provide the infrastructure—Firecracker microVMs, a deterministic sequencer, a seeded bot fleet, and event-by-event correctness validation. **You provide the matching logic.**
 
-## ⚡ Why IICPC Exchange?
+It’s like competitive programming, but for building high-frequency trading (HFT) exchanges.
 
-<table>
+---
+
+## ✨ Engineering Marvels
+
+<table width="100%">
 <tr>
 <td width="50%">
 
-### 🎯 &nbsp;Fair by Design
-Every contestant gets identical compute, memory, and network resources. A centralized sequencer eliminates arrival-order variance. Shared-memory IPC ring buffers isolate engine latency from network jitter. No contestant has an unfair advantage.
+### 🔒 Hardware-Grade Isolation
+Untrusted contestant code runs in **Firecracker microVMs** with CPU pinning (`isolcpus`), SMT disabled, and strict cgroup memory/IO limits. No noisy neighbors.
 
 </td>
 <td width="50%">
 
-### 🔬 &nbsp;Verified Correctness
-Every submission is validated event-by-event against a golden-standard reference engine. Schema checks, state machine compliance, price-time priority verification, and full replay diffing — 8 layers of validation ensure no incorrect engine sneaks through.
+### ⏱️ Absolute Determinism
+A centralized **Sequencer** assigns globally monotonic sequence numbers and nanosecond logical timestamps to all incoming orders. Arrival-order variance is mathematically eliminated.
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🚀 &nbsp;Built for Scale
-100K+ orders/sec sustained throughput. Distributed federation with Raft consensus. Multi-node execution with write-ahead logging. Kubernetes-native with Helm charts, Terraform IaC, and GitOps pipelines.
+### ⚡ Zero-Jitter IPC
+Network latency is decoupled from engine latency. The platform delivers sequenced events via **wait-free SPSC shared-memory ring buffers**. We measure your engine's true nanosecond performance.
 
 </td>
 <td width="50%">
 
-### 🏆 &nbsp;Full Competition Stack
-Bracket tournaments (single/double elimination, Swiss, round-robin), seasonal campaigns, real-time leaderboards, multi-criteria grading (A+ to F), and a React dashboard with live WebSocket streaming.
+### 🛡️ Event-Level Validation
+Every submission is diffed event-by-event against a golden **Reference Engine**. We enforce state machine compliance, quantity conservation, and strict price-time priority.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🤖 Distributed Bot Fleet
+Generates **100,000+ orders/second** using seeded PRNGs. Bots execute configurable strategies (Market Making, Momentum, Noise) mapped to realistic market regimes.
+
+</td>
+<td width="50%">
+
+### 🌍 Federated Consensus
+Multi-node execution powered by a **Raft-inspired consensus protocol**, complete with write-ahead logging (WAL), snapshotting, and autonomous self-healing.
 
 </td>
 </tr>
 </table>
 
+---
+
+## 🏗️ System Architecture
+
+The platform is divided into a **Control Plane** for orchestration and a **Runner Cluster** for CPU-pinned execution.
+
+```mermaid
+flowchart TB
+    subgraph Control Plane
+        Dashboard[Operator Dashboard\nReact/FastAPI]
+        Leaderboard[(Redis Leaderboard)]
+        Scoring[Scoring Engine]
+        Telemetry[Telemetry & Analytics]
+        Governance[Governance & Federation]
+    end
+
+    subgraph Runner Cluster [Isolated Runner Node]
+        BotFleet[Bot Fleet\nLoad Generators]
+        Sequencer[Sequencer\nMonotonic Timestamps]
+        
+        Gateway[IPC Gateway]
+        
+        Sandbox[Firecracker Sandbox\nContestant Engine]
+        Reference[Reference Engine\nGolden Standard]
+        
+        Validator[Validation Engine\nState & Replay Diffs]
+    end
+
+    BotFleet -->|Raw Orders| Sequencer
+    Sequencer -->|Sequenced Journal| Gateway
+    Sequencer -->|Sequenced Journal| Reference
+    
+    Gateway -->|Shared Memory Ring Buffer| Sandbox
+    
+    Sandbox -->|Execution Reports| Validator
+    Reference -->|Execution Reports| Validator
+    
+    Validator -->|Correctness Diffs| Scoring
+    Sandbox -.->|Latency Metrics| Telemetry
+    
+    Scoring --> Leaderboard
+    Telemetry --> Dashboard
+```
+
+---
+
+## 🧩 Core Components
+
+The IICPC monorepo contains over 30 micro-packages. Here are the pillars of the platform:
+
+<details>
+<summary><b>1️⃣ Execution & Sequencing (`gateway/`, `sequencer/`, `execution/`)</b></summary>
 <br/>
+The heart of the runtime. The Sequencer writes an append-only journal of all events. The Gateway reads this journal and bridges it to contestant engines via SBE (Simple Binary Encoding) over shared memory.
+</details>
 
-## 📐 Architecture
-
-```
-                           ┌──────────────────────────────────┐
-                           │        Contestant Upload         │
-                           └──────────────┬───────────────────┘
-                                          ▼
-                           ┌──────────────────────────────────┐
-                           │   Build Pipeline (scan + image)  │
-                           └──────────────┬───────────────────┘
-                                          ▼
-┌──────────────┐    ┌──────────────────────────────────────────────────────┐
-│              │    │              Runner Cluster (CPU-pinned)             │
-│   Bot Fleet  │───▶│                                                      │
-│  (seeded     │    │  ┌───────────┐    ┌──────────┐    ┌──────────────┐  │
-│   PRNG)      │    │  │ Sequencer │───▶│ Gateway  │───▶│  Contestant  │  │
-│              │    │  │ (SeqNo +  │    │  (IPC)   │    │  Sandbox     │  │
-└──────────────┘    │  │  Journal) │    └──────────┘    │  (MicroVM)   │  │
-                    │  └─────┬─────┘                    └──────┬───────┘  │
-                    │        │                                 │          │
-                    │        │         ┌──────────────┐        │          │
-                    │        └────────▶│  Reference   │        │          │
-                    │                  │  Engine      │        │          │
-                    │                  └──────┬───────┘        │          │
-                    └─────────────────────────┼────────────────┼──────────┘
-                                              │                │
-                                              ▼                ▼
-                                     ┌────────────────────────────┐
-                                     │   Validation Engine (diff) │
-                                     └────────────┬───────────────┘
-                                                  ▼
-                    ┌─────────────┐    ┌───────────────────┐    ┌──────────────┐
-                    │  Telemetry  │───▶│  Scoring Engine    │───▶│  Leaderboard │
-                    │  Pipeline   │    │  (weighted rank)   │    │  (live)      │
-                    └─────────────┘    └───────────────────┘    └──────────────┘
-```
-
-**Tech Stack:** Python 3.11+ · FastAPI · gRPC/Protobuf · Apache Kafka (KRaft) · PostgreSQL (TimescaleDB) · Redis · React 19 · Kubernetes · Terraform · Prometheus/Grafana
-
+<details>
+<summary><b>2️⃣ Validation & Scoring (`validation_engine/`, `scoring/`, `reference_engine/`)</b></summary>
 <br/>
+The Reference Engine supports FIFO, Pro-Rata, and Threshold Pro-Rata matching. The Validation Engine computes deep replay diffs. The Scoring Engine generates a composite score based on correctness (70%), latency (15%), throughput (10%), and reliability (5%).
+</details>
 
-## 🚀 Quick Start
-
-### Using Docker Compose (recommended)
-
-```bash
-# Clone
-git clone https://github.com/orbaps/exchange.git && cd exchange
-
-# Install deps & compile protos
-pip install -r requirements.txt
-make proto
-
-# Launch everything
-docker-compose up -d
-```
-
-| Service | URL | Description |
-|:---|:---|:---|
-| 🖥️ Dashboard | [localhost:8080](http://localhost:8080) | Operator dashboard UI |
-| 🔌 API Gateway | [localhost:8000](http://localhost:8000) | Main REST + gRPC API |
-| 📊 Grafana | [localhost:3000](http://localhost:3000) | Monitoring dashboards |
-| 📈 Prometheus | [localhost:9090](http://localhost:9090) | Metrics |
-
-### Local Development
-
-```bash
-python -m venv .venv && .venv\Scripts\activate   # Windows
-# source .venv/bin/activate                       # Linux/macOS
-
-pip install -r requirements.txt
-make proto
-
-# Start infra only
-docker-compose up -d postgres redis kafka
-
-# Run a service
-python -m uvicorn dashboard.app:app --port 8080 --reload
-```
-
-### Kubernetes (KIND)
-
-```powershell
-# Windows
-.\scripts\kind-cluster.ps1
-
-# Linux/macOS
-./scripts/kind-cluster.sh
-```
-
-> 📘 See [KIND_CLUSTER.md](KIND_CLUSTER.md) for detailed cluster setup and troubleshooting.
-
+<details>
+<summary><b>3️⃣ Distributed Federation (`federation/`, `orchestration/`, `governance/`)</b></summary>
 <br/>
-
-## 🧩 Project Overview
-
-<details>
-<summary><b>🔧 Core Engine</b> — The matching infrastructure</summary>
-
-| Component | Description |
-|:---|:---|
-| [`gateway/`](gateway/) | IPC bridge — reads sequenced journal, delivers events to engines via shared-memory ring buffers |
-| [`sequencer/`](sequencer/) | Assigns globally monotonic sequence numbers + nanosecond timestamps, journals to disk |
-| [`execution/`](execution/) | Multi-threaded execution framework dispatching events to contestant sessions |
-| [`scoring/`](scoring/) | Weighted composite scoring: 70% correctness, 15% latency, 10% throughput, 5% reliability |
-| [`reference_engine/`](reference_engine/) | Golden-standard matching engine — FIFO, Pro-Rata, and Threshold Pro-Rata algorithms |
-| [`contracts/`](contracts/) | Shared domain types (orders, trades, instruments, sessions) as Python dataclasses |
-| [`proto/`](proto/) | Protobuf/gRPC schemas for inter-service communication |
-
+Raft-based leader election, distributed scheduling, and an autonomous cluster brain that detects anomalies, predicts capacity limits, and self-heals network partitions.
 </details>
 
 <details>
-<summary><b>📋 Submission Pipeline</b> — From upload to execution</summary>
-
-| Component | Description |
-|:---|:---|
-| [`submission/`](submission/) | Validates structure (metadata.json + engine.py), AST-parses code, loads engines dynamically |
-| [`validation/`](validation/) | Release hardening — determinism audits, security scans, dependency checks |
-| [`validation_engine/`](validation_engine/) | Correctness engine — replay diffs, state machine compliance, price-time priority checks |
-| [`sandbox/`](sandbox/) | Subprocess sandbox with resource limits (CPU, memory, timeout) |
-| [`contestant_sandbox/`](contestant_sandbox/) | Production-grade Firecracker microVM isolation with CPU pinning + seccomp profiles |
-| [`orchestration/`](orchestration/) | Autonomous cluster brain — anomaly detection, capacity forecasting, self-healing |
-
-</details>
-
-<details>
-<summary><b>🏆 Competition Platform</b> — Tournaments, campaigns & leaderboards</summary>
-
-| Component | Description |
-|:---|:---|
-| [`tournament/`](tournament/) | Multi-stage bracket tournaments (qualification → group → semifinal → final) |
-| [`campaign/`](campaign/) | Benchmark campaign execution across multiple scenarios and contestants |
-| [`leaderboard/`](leaderboard/) | Ranked leaderboard snapshots with tiebreaking, grades, and history |
-| [`evaluation/`](evaluation/) | Deep evaluation — rule-based judging, adversarial testing, SHA-256 chained audit trail |
-| [`benchmarking/`](benchmarking/) | Scenario-based benchmarking with certification (QPS, latency thresholds) |
-| [`governance/`](governance/) | Autonomous governance — risk forecasting, policy evolution, approval workflows |
-| [`strategic/`](strategic/) | Multi-cluster coordination — strategic planning across time horizons |
-
-</details>
-
-<details>
-<summary><b>🤖 Load Generation</b> — Bot fleet & market simulation</summary>
-
-| Component | Description |
-|:---|:---|
-| [`botfleet/`](botfleet/) | Deterministic bot fleet with 4 strategies: RandomTrader, MarketMaker, MomentumTrader, NoiseTrader |
-| [`telemetry/`](telemetry/) | Latency distributions (p50–p99), throughput (EPS), failure rates, execution statistics |
-| [`performance/`](performance/) | Platform self-testing: bottleneck detection, load testing, telemetry profiling |
-| [`analytics/`](analytics/) | Platform-wide event bus (100+ event types) and analytics aggregation |
-
-</details>
-
-<details>
-<summary><b>🖥️ Frontend & SDK</b> — Dashboard and contestant tools</summary>
-
-| Component | Description |
-|:---|:---|
-| [`frontend/`](frontend/) | React 19 + TypeScript SPA — 22+ routes, WebSocket streaming, Recharts, Zustand state |
-| [`dashboard/`](dashboard/) | FastAPI backend — 12 API routers, event bridge, journal-based state rebuild |
-| [`sdk/`](sdk/) | Contestant SDK — C ABI engine interface, SPSC ring buffer, FFI engine loader |
-| [`demo/`](demo/) | Deterministic demo runner with SHA-256 fingerprinted reproducibility |
-| [`examples/`](examples/) | Sample contestant submission with metadata.json + engine.py template |
-
-</details>
-
-<details>
-<summary><b>🌐 Federation & Infrastructure</b> — Distributed systems backbone</summary>
-
-| Component | Description |
-|:---|:---|
-| [`federation/`](federation/) | Raft consensus, WAL replication, distributed scheduling, cryptographic signing, 8-step recovery |
-| [`hosting/`](hosting/) | Container lifecycle management — build, deploy, run, monitor with resource quotas |
-| [`iac/`](iac/) | Dockerfiles, Helm chart, Terraform modules (networking/k8s/storage/security/monitoring/backup) |
-| [`gitops/`](gitops/) | Deployment sync + rollback management |
-| [`dr/`](dr/) | Disaster recovery — cluster backup/restore, snapshot export/import |
-| [`packaging/`](packaging/) | Deterministic submission package builder with SHA-256 fingerprints |
-
-</details>
-
+<summary><b>4️⃣ Competition Platform (`tournament/`, `campaign/`, `leaderboard/`)</b></summary>
 <br/>
+Full bracket tournament management (single/double elimination, Swiss), benchmark campaigns, and a Redis-backed real-time leaderboard with time-series history.
+</details>
 
-## 🛠️ SDK — Build Your Engine
+<details>
+<summary><b>5️⃣ Infrastructure & UI (`hosting/`, `dashboard/`, `frontend/`, `iac/`)</b></summary>
+<br/>
+A React 19 SPA dashboard streaming live WebSocket analytics. Complete Kubernetes Helm charts and Terraform provisioning for GKE/OKE.
+</details>
 
-Contestants implement a matching engine as a **shared library** (.so/.dll) exporting three functions:
+---
+
+## 💻 Contestant SDK
+
+Contestants do not write network servers. They write pure, high-performance algorithms. 
+
+Your submission is compiled as a shared library (`.so` / `.dll`) exposing a strict C ABI. The platform loads it dynamically and communicates via shared memory.
 
 ```c
-// Initialize with instrument definitions
+// 1. Initialize your data structures
 EngineHandle* engine_init(const InstrumentDefinition* instruments, uint32_t count);
 
-// Process each inbound message, write ExecutionReports to outbound ring buffer
-void engine_on_message(EngineHandle* handle, const JournalRecord* record, RingBufferWriter* out);
+// 2. Process incoming sequenced events (New, Cancel, Replace)
+// 3. Write ExecutionReports to the outbound ring buffer
+void engine_on_message(
+    EngineHandle* handle, 
+    const JournalRecord* record, 
+    RingBufferWriter* out
+);
 
-// Cleanup on shutdown
+// 4. Clean up
 void engine_destroy(EngineHandle* handle);
 ```
 
-The platform handles networking, sequencing, and IPC — **you only write the matching logic**.
+### Supported Exchange Features
+- **Order Types:** Limit, Market, Stop-Limit
+- **Time In Force:** GFD (Good for Day), GTC, IOC, FOK
+- **Self-Match Prevention:** Cancel Newest, Cancel Oldest, Cancel Both
+- **Sessions:** Pre-Open (Auction Uncrossing), Continuous, Halted
 
-### Submission Structure
+> 💡 **Want to see it in action?** Check out the [`examples/`](examples/) directory for a complete template.
 
-```
-my_submission/
-├── metadata.json    # { "team_name": "...", "engine_class": "...", "version": "1.0" }
-├── engine.py        # Your matching engine implementation
-└── README.md        # Documentation
-```
+---
 
-> 📘 See [`examples/`](examples/) for a complete working template.
+## 🚦 Getting Started
 
-### What Gets Tested
+### Prerequisites
+- Python 3.11+
+- Docker 24+ & Docker Compose
+- (Optional) `kubectl` and `kind` for local Kubernetes deployment
 
-| Check | Description | Severity |
-|:---|:---|:---|
-| Schema validation | Required fields, enum ranges | Fatal |
-| Sequence validation | Monotonic, gap-free output | Fatal |
-| Order state invariant | `original_qty == cumulative_qty + leaves_qty + canceled_qty` | Fatal |
-| State machine compliance | No illegal transitions (e.g., Filled → PartiallyFilled) | Fatal |
-| Price-time priority | Earlier orders at same price fill first | Critical |
-| Replay diff | Field-by-field comparison vs. reference engine | Critical |
-
-<br/>
-
-## 🧪 Testing
+### Option A: The Fast Track (Docker Compose)
+Launch the entire platform, including Postgres, Redis, Kafka (KRaft), and the React Dashboard.
 
 ```bash
-make test           # Full test suite with coverage
-make test-quick     # Fast run, no coverage
-make lint           # Ruff linter
-make fmt            # Auto-format
-make mypy           # Type checking
-make all            # Everything: proto + lint + test + docker-build + helm-lint
-```
+git clone https://github.com/orbaps/exchange.git
+cd exchange
 
-24 test modules covering every component — from unit tests through integration and golden-test suites.
-
-<br/>
-
-## 🔄 CI/CD
-
-| Workflow | Trigger | What it does |
-|:---|:---|:---|
-| **CI** | Push/PR to `main` | Protobuf lint → Python lint/test → Frontend checks → Docker build matrix → Helm lint |
-| **CD** | Merge to `main` | Build + push images to GHCR → Deploy to KIND (dev) → Staging (Oracle Cloud) |
-| **Release** | Tag push | Multi-arch build (amd64+arm64) → Helm chart package → GitHub Release |
-| **Security** | Push/PR + weekly | Trivy scans → pip-audit → npm audit → CodeQL analysis |
-
-<br/>
-
-## 📚 Documentation
-
-| Document | Description |
-|:---|:---|
-| [`docs/spec_v2.md`](docs/spec_v2.md) | Full platform specification (1800+ lines) — domain model, matching rules, state machines, replay design |
-| [`docs/technical_design.md`](docs/technical_design.md) | Technical architecture deep-dive |
-| [`generated/api_docs.md`](generated/api_docs.md) | Auto-generated API reference with examples |
-| [`KIND_CLUSTER.md`](KIND_CLUSTER.md) | Local Kubernetes setup guide |
-| [`docs/`](docs/) | Phase-by-phase development documentation (Phase 2.6 through 9.2) |
-
-<br/>
-
-## 🤝 Contributing
-
-We welcome contributions! Here's the workflow:
-
-```bash
-# 1. Fork & clone
-git clone https://github.com/YOUR_USERNAME/exchange.git && cd exchange
-
-# 2. Set up dev environment
+# Install Python dependencies and generate gRPC stubs
 pip install -r requirements.txt
 make proto
 
-# 3. Create a branch
-git checkout -b feat/my-feature
+# Boot the cluster
+docker-compose up -d
+```
+Access the operator dashboard at **[http://localhost:8080](http://localhost:8080)**.
 
-# 4. Make changes, test, lint
-make test && make lint
+### Option B: Local Kubernetes (KIND)
+Spin up a multi-node Kubernetes cluster locally using KIND.
 
-# 5. Push & open a PR
-git push origin feat/my-feature
+```bash
+# Windows
+.\scripts\kind-cluster.ps1
+
+# Linux / macOS
+./scripts/kind-cluster.sh
+```
+*See [KIND_CLUSTER.md](KIND_CLUSTER.md) for ingress and port mappings.*
+
+---
+
+## 🧪 Testing & Validation
+
+The platform tests itself rigorously before it tests contestants.
+
+```bash
+make test           # Run 24+ test suites with coverage
+make lint           # Ruff linting
+make fmt            # Auto-formatting
+make mypy           # Static type analysis
 ```
 
-### Makefile Reference
+Our CI/CD pipeline enforces 100% determinism across the platform, running security audits (`pip-audit`, CodeQL) and matrix builds for all 7 microservices.
 
-| Command | Description |
-|:---|:---|
-| `make init` | Install deps + compile protos |
-| `make proto` | Compile .proto definitions |
-| `make test` | Run tests with coverage |
-| `make lint` | Lint with ruff |
-| `make fmt` | Auto-format |
-| `make docker-build` | Build all Docker images |
-| `make helm-lint` | Validate Helm chart |
-| `make kind-deploy` | Deploy to local KIND cluster |
-| `make clean` | Remove build artifacts |
+---
 
-<br/>
+## 🤝 Contributing
 
-## 📄 License
+We are building the ultimate open-source benchmarking standard for trading systems. PRs are welcome!
 
-This project is licensed under the [MIT License](LICENSE).
+1. Fork the repo
+2. Create your feature branch (`git checkout -b feature/amazing-engine`)
+3. Commit your changes (`git commit -m 'feat: add amazing engine'`)
+4. Push to the branch (`git push origin feature/amazing-engine`)
+5. Open a Pull Request
 
 ---
 
 <div align="center">
+<br/>
+<p>Distributed under the <strong>MIT License</strong>. See <code>LICENSE</code> for more information.</p>
 
-**Built with ❤️ for fair, deterministic, and scalable competitive benchmarking**
-
-[⬆ Back to top](#iicpc-exchange)
+<p><b>Built for the obsessed. Engineered for fairness.</b> 🏛️</p>
 
 </div>
 ]]>
