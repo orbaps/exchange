@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: iicpc-platform
+  namespace: argocd
+spec:
+  description: IICPC Distributed Benchmarking Platform
+  sourceRepos:
+    - https://github.com/orbaps/exchange
+  destinations:
+    - namespace: iicpc
+      server: https://kubernetes.default.svc
+    - namespace: iicpc-monitoring
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  orphanedResources:
+    warn: true
