@@ -41,42 +41,6 @@ dependencies = [
     "tenacity>=8.2.3",
 ]
 
-[tool.setuptools]
-packages = [
-    "analytics",
-    "benchmarking",
-    "botfleet",
-    "campaign",
-    "contracts",
-    "contestant_sandbox",
-    "dashboard",
-    "demo",
-    "docs_generator",
-    "evaluation",
-    "execution",
-    "federation",
-    "gateway",
-    "generated",
-    "gitops",
-    "governance",
-    "hosting",
-    "leaderboard",
-    "orchestration",
-    "packaging",
-    "performance",
-    "reference_engine",
-    "sandbox",
-    "scoring",
-    "sdk",
-    "sequencer",
-    "strategic",
-    "submission",
-    "telemetry",
-    "tournament",
-    "validation",
-    "validation_engine",
-]
-
 [tool.setuptools.packages.find]
 include = ["*"]
 exclude = ["tests*", "docs*", "frontend*", "proto*", "scripts*", "iac*"]

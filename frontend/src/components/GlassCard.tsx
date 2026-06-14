@@ -30,3 +30,5 @@ const styles = {
     paddingBottom: '10px',
   },
 };
+
+export default GlassCard;
