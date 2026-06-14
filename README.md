@@ -393,29 +393,83 @@ ws.onmessage = (event) => {
 
 ---
 
-## 15. Deployment Guide
+## 15. Installation & Walkthrough
 
-### Local Development (Docker Compose)
-Perfect for testing contestant code locally before submission.
+Whether you are a hacker testing your algorithm locally or a judge evaluating the platform, follow this walkthrough to get the platform running.
+
+### 15.1 Prerequisites
+Before you begin, ensure you have the following installed on your machine:
+*   **Docker & Docker Compose**: For container orchestration.
+*   **Go (1.21+)**: To build the Bot Fleet and CLI.
+*   **Rust (1.75+)**: To compile the Golden Reference Engine.
+*   **Node.js (20+)**: To run the Next.js frontend dashboard.
+
+### 15.2 Step-by-Step Installation
+
+**1. Clone the Repository**
 ```bash
 git clone https://github.com/iicpc-team/exchange.git
 cd exchange
-
-# Boot Kafka, Redis, Postgres, and the Platform APIs
-docker-compose up -d
-
-# Verify services
-docker-compose ps
 ```
 
-### Production Deployment (Kubernetes)
-Ensure you have an active `KUBECONFIG`.
+**2. Boot the Infrastructure Layer**
+Spin up the required data stores (Kafka, Redis, PostgreSQL, TimescaleDB) using Docker Compose.
 ```bash
-# Provision cloud resources
+docker-compose up -d
+docker-compose ps # Verify all services are healthy
+```
+
+**3. Start the Core Services**
+Open separate terminal tabs to run the core backend components:
+```bash
+# Terminal 1: Run the API Gateway & Orchestrator
+cd cmd/gateway && go run main.go
+
+# Terminal 2: Run the Rust Sequencer
+cd cmd/sequencer && cargo run --release
+
+# Terminal 3: Run the Bot Fleet (Load Generator)
+cd cmd/botfleet && go run main.go --workers 500
+```
+
+**4. Launch the Leaderboard Dashboard**
+```bash
+cd src/frontend
+npm install
+npm run dev
+# Dashboard is now live at http://localhost:3000
+```
+
+### 15.3 System Walkthrough: Submitting an Engine
+
+Once the platform is running, you can simulate the full hackathon experience.
+
+**1. Build the IICPC CLI**
+```bash
+go build -o iicpc-cli ./cmd/cli
+```
+
+**2. Submit a Sample Engine**
+We provide a naive C++ matching engine in the `examples/` directory. Submit it using the CLI:
+```bash
+./iicpc-cli submit --language cpp --path ./examples/naive-cpp-engine
+```
+
+**3. Watch the Evaluation**
+1. Navigate to **`http://localhost:3000/dashboard`**.
+2. You will see your submission transition from `BUILDING` -> `QUEUED` -> `RUNNING`.
+3. The **Bot Fleet** will automatically detect the `RUNNING` state and begin blasting the Sandbox with orders.
+4. Watch the real-time TPS, p99 Latency, and Correctness metrics stream onto your dashboard via WebSockets.
+5. Once the run concludes, the engine is assigned a final composite score and added to the **Leaderboard**.
+
+### 15.4 Production Deployment (Kubernetes)
+For true distributed scale across bare-metal nodes, use our provided IaC scripts:
+```bash
+# Provision cloud resources via Terraform
 cd deployments/terraform/environments/prod
 terraform init && terraform apply -auto-approve
 
-# Deploy platform via Helm
+# Deploy microservices via Helm
 helm repo add iicpc https://charts.iicpc.dev
 helm install iicpc-platform iicpc/exchange-platform --namespace exchange --create-namespace
 ```
