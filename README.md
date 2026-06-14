@@ -6,7 +6,7 @@
 
 **Official Submission — IICPC Summer Hackathon 2026**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/iicpc-team/exchange/ci.yml?branch=main&label=Build&logo=githubactions&logoColor=white&style=for-the-badge)](https://github.com/iicpc-team/exchange/actions)
+
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Native-326CE5.svg?logo=kubernetes&logoColor=white&style=for-the-badge)](https://kubernetes.io)
 [![Rust](https://img.shields.io/badge/Rust-Safe_Systems-000000.svg?logo=rust&logoColor=white&style=for-the-badge)](https://rust-lang.org)
