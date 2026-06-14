@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 <img src=".github/assets/banner.png" alt="IICPC Exchange Platform" width="100%" />
 
@@ -485,4 +485,4 @@ We invite top-tier systems engineers to push the boundaries of performance, and 
 <br/>
 <p>Architected by the IICPC Core Engineering Team.</p>
 </div>
-]]>
+
